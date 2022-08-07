@@ -379,10 +379,16 @@ def tab_changed(evt):
 
 
 def remove_if_text_changed(evt):
+    if evt.widget != scroll_txt2:
+        return
+
     scroll_txt2.edit_modified(False)  # reset to detect next change
 
 
 def include_if_text_changed(evt):
+    if evt.widget != scroll_txt3:
+        return
+
     scroll_txt3.edit_modified(False)  # reset to detect next change
 
 
