@@ -10,6 +10,7 @@ pd.options.mode.chained_assignment = None
 # pd.set_option('display.max_rows', None)
 
 df = pd.DataFrame()
+untouched_df = pd.DataFrame()
 summary_df = pd.DataFrame()
 columns = []
 last_err_str = ''
@@ -18,6 +19,7 @@ exit_flag = False
 df_updated = False
 remove_if_str = ''
 include_if_str = ''
+rules = {}
 progress_lock = threading.Lock()
 error_lock = threading.Lock()
 exit_flag_lock = threading.Lock()
@@ -107,14 +109,34 @@ def get_deleted_cols():
     return del_cols
 
 
+def get_remove_if_str():
+    global remove_if_str
+    return remove_if_str
+
+
 def set_remove_if_str(rem_str):
     global remove_if_str
-    remove_if_str = rem_str
+    remove_if_str = rem_str.strip()
+
+
+def get_include_if_str():
+    global include_if_str
+    return include_if_str
 
 
 def set_include_if_str(add_str):
     global include_if_str
-    include_if_str = add_str
+    include_if_str = add_str.strip()
+
+
+def set_rules(r):
+    global rules
+    rules = r
+
+
+def get_rules():
+    global rules
+    return rules
 
 
 def clear():
@@ -127,8 +149,8 @@ def clear():
     global df_updated
     global avg_cols
     global del_cols
-    global remove_if_str
-    global include_if_str
+    # global remove_if_str
+    # global include_if_str
 
     df = pd.DataFrame()
     summary_df = pd.DataFrame()
@@ -139,8 +161,8 @@ def clear():
     columns = []
     avg_cols = []
     del_cols = []
-    remove_if_str = ''
-    include_if_str = ''
+    # remove_if_str = ''
+    # include_if_str = ''
 
 # [
 #     'Approach of teachers during the PTM.',
@@ -156,25 +178,45 @@ def clear():
 # ]
 
 
-def convert_to_num(str1):
-    if str1 == 'Outstanding':
-        return 10
-    elif str1 == 'Excellent':
-        return 9
-    elif str1 == 'Good':
-        return 8
-    elif str1 == 'Average':
-        return 7
-    elif str1 == 'Poor':
-        return 5
-    elif str1 == 'Very Poor':
-        return 3
+def is_int(s):
+    try:
+        int(s)
+        return True
+    except ValueError:
+        return False
+
+
+def is_float(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
+tmp_col_rules = {}
+
+
+def get_val_from_rule(str1):
+    val = tmp_col_rules.get(str1, '')
+    if len(val) > 0:
+        if is_int(val):
+            return int(val)
+        elif is_float(val):
+            return float(val)
+        else:
+            return val
     else:
-        return 0
+        return str1
 
 
-def convert_col(df1, col_name):
-    df1[col_name] = df[col_name].apply(convert_to_num)
+def apply_rules_on_column(df1, col_name):
+    if len(rules) == 0:
+        return
+
+    global tmp_col_rules
+    tmp_col_rules = rules[col_name]
+    df1[col_name] = df[col_name].apply(get_val_from_rule)
 
 
 def update_average(cl_df, col_name):
@@ -183,6 +225,8 @@ def update_average(cl_df, col_name):
 
 def select_all_numeric_cols():
     if get_df_updated():
+        global avg_cols
+        avg_cols.clear()
         for col in columns:
             is_numeric = True
             count_nan = 0
@@ -198,14 +242,11 @@ def select_all_numeric_cols():
 
 
 def apply_rules():
-    if get_df_updated():
+    if get_df_updated() and (len(rules) > 0):
         global df
         df.reset_index(inplace=True, drop=True)
-        convert_col(df, 'a) Academic subjects transaction')
-        convert_col(df, 'b) Activity classes transaction')
-        convert_col(df, "c) Class Teacher’s approach\n")
-        convert_col(df, "d) Subject Teacher’s Approach")
-        convert_col(df, 'e) Written work/ Assignments')
+        for col in columns:
+            apply_rules_on_column(df, col)
 
 
 def update_df(in_paths):
@@ -213,25 +254,34 @@ def update_df(in_paths):
     set_last_error('')
     set_df_updated(False)
     global df
+    global untouched_df
     try:
-        df = pd.DataFrame()
+        untouched_df = pd.DataFrame()
         for in_path in in_paths:
             if get_exit_flag():
                 break
 
-            df = df.append(pd.read_excel(in_path))
+            untouched_df = untouched_df.append(pd.read_excel(in_path))
 
         global columns
-        columns = df.columns.to_list()
+        columns = untouched_df.columns.to_list()
     except Exception as e:
         set_last_error(e)
         success = False
 
     set_df_updated(True)
 
+    df = untouched_df.copy()
+
     apply_rules()
 
     return success
+
+
+def reset_df():
+    global df
+    global untouched_df
+    df = untouched_df.copy()
 
 
 def delete_columns():
@@ -390,13 +440,13 @@ def do_work(in_paths, out_path):
             summary_df.loc['Average'] = avg_of_avg
             axl.append_df_to_excel(out_path, summary_df, sheet_name='Summary')
 
-        # axl.append_df_to_excel(out_path, count_df, sheet_name='Counts')
-        book = load_workbook(out_path)
-        writer = pd.ExcelWriter(out_path, engine='openpyxl')
-        writer.book = book
-        writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
-        count_df.to_excel(writer, "Counts", startrow=0, startcol=0)
-        writer.save()
+        axl.append_df_to_excel(out_path, count_df, sheet_name='Counts', startrow=0, startcol=0)
+        # book = load_workbook(out_path)
+        # writer = pd.ExcelWriter(out_path, engine='openpyxl')
+        # writer.book = book
+        # writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
+        # count_df.to_excel(writer, "Counts", startrow=0, startcol=0)
+        # writer.save()
 
         print('Done!!!')
     except Exception as e:
