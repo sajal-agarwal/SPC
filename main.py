@@ -194,6 +194,28 @@ def is_float(s):
         return False
 
 
+def update_average(cl_df, col_name):
+    cl_df.at['Average', col_name] = round(cl_df[col_name].mean(), 2)
+
+
+def select_all_numeric_cols():
+    if get_df_updated():
+        global avg_cols
+        avg_cols.clear()
+        for col in columns:
+            is_numeric = True
+            count_nan = 0
+            for item in df[col]:
+                if not isinstance(item, (int, float)):
+                    is_numeric = False
+                    break
+                elif math.isnan(item):
+                    count_nan += 1
+
+            if is_numeric and (count_nan < df[col].size):
+                avg_cols.append(col)
+
+
 tmp_col_rules = {}
 
 
@@ -216,29 +238,10 @@ def apply_rules_on_column(df1, col_name):
 
     global tmp_col_rules
     tmp_col_rules = rules[col_name]
+    if len(tmp_col_rules) == 0:
+        return
+
     df1[col_name] = df[col_name].apply(get_val_from_rule)
-
-
-def update_average(cl_df, col_name):
-    cl_df.at['Average', col_name] = round(cl_df[col_name].mean(), 2)
-
-
-def select_all_numeric_cols():
-    if get_df_updated():
-        global avg_cols
-        avg_cols.clear()
-        for col in columns:
-            is_numeric = True
-            count_nan = 0
-            for item in df[col]:
-                if not isinstance(item, (int, float)):
-                    is_numeric = False
-                    break
-                elif math.isnan(item):
-                    count_nan += 1
-
-            if is_numeric and (count_nan < df[col].size):
-                avg_cols.append(col)
 
 
 def apply_rules():
