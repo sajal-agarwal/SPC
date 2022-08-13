@@ -1,5 +1,4 @@
 import logging
-import tkinter as tk
 from main import *
 from tkinter import *
 from tkinterdnd2 import *
@@ -10,6 +9,8 @@ import os
 from threading import Thread
 import json
 from tkinter import messagebox
+import tkinter.font as tk_font
+
 
 bottom_bar_y = 150
 in_filenames = []
@@ -27,17 +28,27 @@ cur_profile = {}
 profile_dir = ''
 generation_aborted = False
 clear_msg_on_tab_change = False
+summary_window = None
+rsf_index = 0  # Right Side Frame index
+app_help = {}
 
 app_data_path = os.path.join(os.getenv('APPDATA'), 'SPC')  # School Performance Calculator
 if not os.path.exists(app_data_path):
     os.makedirs(app_data_path)
 default_profile_file = os.path.join(app_data_path, 'default_profile.json')
 
+help_file_name = './help/help.json'
+try:
+    with open(help_file_name) as f:
+        app_help = json.load(f)
+except Exception as err:
+    logging.info(err)
+
 try:
     with open(default_profile_file, 'r') as f:
         cur_profile = json.load(f)
 except Exception as err:
-    logging.info('Default profile does not exist')
+    logging.error(err)
 
 
 def load_paths_from_default_profile():
@@ -110,42 +121,69 @@ def set_input_file_names(text):
     scroll_txt.configure(state='disabled')
 
 
+def summary_ok_clicked():
+    trigger_generation()
+    global summary_window
+    summary_window.destroy()
+
+
 def get_summary():
-    msg = 'Input files:\n-----------'
+    tbf_normal = tk_font.nametofont('TkTextFont')
+    tbf_heading = tk_font.Font(family=tbf_normal.cget("family"), size=tbf_normal.cget("size") + 2, weight=tk_font.BOLD)
+
+    global summary_window
+    summary_window = Toplevel(window)
+    summary_window.title("Confirmation")
+    summary_window.geometry("600x600")
+    summary_window.grab_set()
+
+    btn = Button(summary_window, text='OK', fg='blue', width=4, command=summary_ok_clicked)
+    btn.pack(side=BOTTOM, pady=6)
+    st = ScrolledText(summary_window)
+    st.pack(expand=1, fill=BOTH, side=BOTTOM, pady=4)
+    st.tag_config('heading', font=tbf_heading)
+    st.insert(END, 'Input files:', 'heading')
 
     for file in in_filenames:
-        msg += '\n' + file
+        st.insert(END, '\n' + file)
 
-    msg += '\n\nColumns to be removed:'
+    st.insert(END, '\n\nColumns to be removed:', 'heading')
     for col in get_deleted_cols():
-        msg += '\n' + col
+        st.insert(END, '\n' + col)
 
-    msg += '\n\nColumns for which average needs to be calculated:'
+    st.insert(END, '\n\nColumns for which average needs to be calculated:', 'heading')
     for col in get_avg_columns():
-        msg += '\n' + col
+        st.insert(END, '\n' + col)
 
-    msg += '\n\nConditions for row removal:\n' + get_remove_if_str()
+    st.insert(END, '\n\nConditions for row removal:\n', 'heading')
+    st.insert(END, get_remove_if_str())
 
-    msg += '\n\nConditions for row inclusion:\n' + get_include_if_str()
+    st.insert(END, '\n\nConditions for row inclusion:\n', 'heading')
+    st.insert(END, get_include_if_str())
 
-    msg += '\nRules to be applied:'
-    msg += '\n' + scroll_txt4.get(0.1, END).strip()
+    st.insert(END, '\n\nRules to be applied:', 'heading')
+    st.insert(END, '\n' + scroll_txt4.get(0.1, END).strip())
 
-    pop = Toplevel(window)
-    pop.title("Confirmation")
-    pop.geometry("400x200")
-    pop.grab_set()
 
-    btn = Button(pop, text='OK', fg='blue', width=4, command=lambda: pop.destroy())
-    btn.pack(side=BOTTOM, pady=3)
-    st = ScrolledText(pop)
-    st.pack(expand=1, fill=BOTH, side=BOTTOM, pady=4)
-    st.insert(END, msg)
+def trigger_generation():
+    global generation_in_progress
+    generation_in_progress = True
+
+    pb.place(x=75, y=bottom_bar_y + 1, width=win_width - 115, height=24)
+    status.place(x=(win_width - 40), y=bottom_bar_y, width=30, height=24)
+    status_text.set('')
+    status.config(fg='black')
+    btn2['text'] = 'Stop'
+
+    global worker_thread
+    set_progress(0)
+    worker_thread = Thread(target=do_work, args=(in_filenames, out_file_name))
+    worker_thread.start()
+
+    window.after(progress_bar_update_interval, update_progress_fun)
 
 
 def generate_out_excel():
-    get_summary()
-
     global generation_in_progress
     if generation_in_progress:
         btn2.configure(state='disabled')
@@ -182,24 +220,12 @@ def generate_out_excel():
         status_text.set('No permission!')
         return
 
-    pb.place(x=75, y=bottom_bar_y + 1, width=win_width - 115, height=24)
-    status.place(x=(win_width - 40), y=bottom_bar_y, width=30, height=24)
-    status_text.set('')
-    status.config(fg='black')
-    btn2['text'] = 'Stop'
-
     set_deleted_cols(listbox.curselection())
     set_average_cols(listbox2.curselection())
     set_remove_if_str(scroll_txt2.get(0.1, END))
     set_include_if_str(scroll_txt3.get(0.1, END))
 
-    generation_in_progress = True
-    global worker_thread
-    set_progress(0)
-    worker_thread = Thread(target=do_work, args=(in_filenames, out_file_name))
-    worker_thread.start()
-
-    window.after(progress_bar_update_interval, update_progress_fun)
+    get_summary()
 
 
 def save_to_default_profile():
@@ -237,14 +263,13 @@ def update_progress_fun():
             status.config(fg='green')
             if generation_aborted:
                 status_text.set('Aborted successfully!')
+                os.remove(out_file_name)
+                generation_aborted = False
+                set_exit_flag(False)
             else:
                 status_text.set('Completed successfully!')
                 save_to_default_profile()
                 os.startfile(out_file_name)
-
-            if generation_aborted:
-                generation_aborted = False
-                set_exit_flag(False)
         else:
             status.config(fg='red')
             status_text.set(err2)
@@ -265,8 +290,9 @@ def update_columns():
                 listbox.insert(index, col)
                 listbox2.insert(index, col)
                 index += 1
-                load_selection_info_from_default_profile()
-                update_rules()
+            load_selection_info_from_default_profile()
+            update_rules()
+            update_preview()
         else:
             status.config(fg='red')
             status_text.set(err1)
@@ -336,6 +362,7 @@ def clear_in_files():
         scroll_txt.configure(state='disabled')
         listbox.delete(0, END)
         listbox2.delete(0, END)
+        clear_preview()
         clear()
     elif cur_tab == 3:
         scroll_txt2.delete('1.0', END)
@@ -406,6 +433,9 @@ def on_avg_listbox_selection_changed():
         status_text.set(str(count) + ' item' + ('s' if (count > 1) else '') +
                         ' removed from Remove Column list: ' + clear_items)
 
+        set_deleted_cols(listbox.curselection())
+        update_preview()
+
 
 def on_rem_listbox_selection_changed():
     sel = listbox.curselection()
@@ -425,6 +455,10 @@ def on_rem_listbox_selection_changed():
         status_text.set(str(count) + ' item' + ('s' if (count > 1) else '') +
                         ' removed from Average Column list: ' + clear_items)
 
+        set_average_cols(listbox2.curselection())
+
+    update_preview()
+
 
 def on_listbox_selection_changed1(evt):
     if evt.widget != listbox:
@@ -438,6 +472,43 @@ def on_listbox_selection_changed2(evt):
         return
 
     on_avg_listbox_selection_changed()
+
+
+def update_help():
+    if rsf_index & 1:
+        tab_name = tabControl.tab(tabControl.select(), 'text')
+        scroll_txt5.config(state='normal')
+        scroll_txt5.delete('1.0', END)
+        scroll_txt5.insert(END, app_help[tab_name])
+        scroll_txt5.config(state='disabled')
+
+
+def clear_preview():
+    for row in preview.get_children():
+        preview.delete(row)
+
+
+def update_preview():
+    if rsf_index & 2:
+        clear_preview()
+        do_remove_if()
+        do_include_if()
+        delete_columns()
+        preview['columns'] = get_df().columns.tolist()
+        anchor_pos = 'w'
+        preview.column("#0", width=0, stretch=NO)
+        preview.heading("#0", text="", anchor=anchor_pos)
+        for col in get_df().columns:
+            preview.column(col, anchor=anchor_pos, width=60)
+            preview.heading(col, text=col, anchor=anchor_pos)
+
+        index = 0
+        while index < len(get_df()):
+            preview.insert(parent='', index='end', iid=index, text='', values=get_df().iloc[index].to_list())
+            index += 1
+
+        reset_df()
+        apply_rules()
 
 
 def tab_changed(evt):
@@ -479,8 +550,10 @@ def tab_changed(evt):
     btn3.configure(state=('disabled' if (cur_tab == 1 or cur_tab == 2) else 'normal'))
     btn4.configure(state=('normal' if (cur_tab == 2) else 'disabled'))
 
+    update_help()
 
-def update_rem_inc_if_str(rem_str):
+
+def validate_rem_inc_if_str(rem_str):
     rem_str = rem_str.strip()
     if len(rem_str) == 0:
         return
@@ -507,18 +580,27 @@ def update_rem_inc_if_str(rem_str):
     if success:
         status.configure(fg='black')
         status_text.set('')
-        set_remove_if_str(rem_str)
     else:
         status.configure(fg='red')
         status_text.set(err_msg)
-        set_remove_if_str('')
+
+    return success
 
 
 def remove_if_text_changed(evt):
     if evt.widget != scroll_txt2:
         return
 
-    update_rem_inc_if_str(scroll_txt2.get(0., END))
+    old_rem_str = get_remove_if_str()
+
+    rem_str = scroll_txt2.get(0., END)
+    if validate_rem_inc_if_str(rem_str):
+        set_remove_if_str(rem_str)
+    else:
+        set_remove_if_str('')
+
+    if old_rem_str != get_remove_if_str():
+        update_preview()
 
     scroll_txt2.edit_modified(False)  # reset to detect next change
 
@@ -527,7 +609,16 @@ def include_if_text_changed(evt):
     if evt.widget != scroll_txt3:
         return
 
-    update_rem_inc_if_str(scroll_txt3.get(0., END))
+    old_inc_str = get_include_if_str()
+
+    inc_str = scroll_txt3.get(0., END)
+    if validate_rem_inc_if_str(inc_str):
+        set_include_if_str(inc_str)
+    else:
+        set_include_if_str('')
+
+    if old_inc_str != get_include_if_str():
+        update_preview()
 
     scroll_txt3.edit_modified(False)  # reset to detect next change
 
@@ -616,6 +707,8 @@ def update_rules():
                 success = False
                 break
 
+    old_rules = get_rules()
+
     if success:
         set_rules(dict1)
         status.config(fg='black')
@@ -625,9 +718,9 @@ def update_rules():
         status.config(fg='red')
         status_text.set(err_msg)
 
-    if success and get_df_updated():
-        reset_df()
+    if (old_rules != get_rules()) and get_df_updated():
         apply_rules()
+        update_preview()
 
     scroll_txt4.edit_modified(False)
 
@@ -672,6 +765,51 @@ def files_dropped(evt):
         load_in_files(xl_files)
 
 
+def update_center_view():
+    if rsf_index == 1:
+        lbl1['text'] = 'Help'
+        tc_width = (win_width - 20) * 2.0 / 3
+        lbl1.place(x=tc_width + 10, y=40, width=50, height=22)
+        tabControl.place(x=10, y=40, width=tc_width, height=win_height - 140)
+        scroll_txt5.place(x=tc_width + 10, y=40 + 22, width=(win_width - tc_width - 20), height=win_height - 140 - 22)
+        preview_frame.place(width=0, height=0)
+    elif rsf_index == 2:
+        lbl1['text'] = 'Preview'
+        tc_width = (win_width - 20) / 3.0
+        lbl1.place(x=tc_width + 10, y=40, width=50, height=22)
+        tabControl.place(x=10, y=40, width=tc_width, height=win_height - 140)
+        preview_frame.place(x=tc_width + 10, y=40 + 22, width=(win_width - tc_width - 20), height=win_height - 140 - 22)
+        scroll_txt5.place(width=0, height=0)
+    elif rsf_index == 3:
+        lbl1['text'] = 'Help & Preview'
+        tc_width = (win_width - 20) / 3.0
+        help_height = (win_height - 140 - 22) / 2
+        lbl1.place(x=tc_width + 10, y=40, width=100, height=22)
+        tabControl.place(x=10, y=40, width=tc_width, height=win_height - 140)
+        scroll_txt5.place(x=tc_width + 10, y=40 + 22, width=(win_width - tc_width - 20), height=help_height)
+        preview_frame.place(x=tc_width + 10, y=(help_height + 40 + 22),
+                            width=(win_width - tc_width - 20), height=help_height)
+    else:
+        lbl1.place(width=0, height=0)
+        tabControl.place(x=10, y=40, width=win_width - 20, height=win_height - 140)
+        scroll_txt5.place(width=0, height=0)
+        preview_frame.place(width=0, height=0)
+
+
+def help_button_clicked():
+    global rsf_index
+    rsf_index = (1 if (help_var.get() == 1) else 0) | (2 if (preview_var.get() == 1) else 0)
+    update_center_view()
+    update_help()
+
+
+def preview_button_clicked():
+    global rsf_index
+    rsf_index = (1 if (help_var.get() == 1) else 0) | (2 if (preview_var.get() == 1) else 0)
+    update_center_view()
+    update_preview()
+
+
 def about_app():
     messagebox.showinfo("SPC", '''This is a School Performance Calculator application \
 it takes school performance data in the form of Excel file and generates another Excel \
@@ -686,15 +824,15 @@ def top_window_resized(event):
     if event.widget == window and (win_width != event.width or win_height != event.height):
         win_width = event.width
         win_height = event.height
-        tabControl.place(x=10, y=40, width=event.width - 20, height=event.height - 140)
+        update_center_view()
         scroll_txt.pack(expand=1, fill="both")
         listbox.pack(side=LEFT, expand=1, fill="both")
         listbox2.pack(side=LEFT, expand=1, fill="both")
         scroll_txt2.pack(expand=1, fill="both")
         scroll_txt3.pack(expand=1, fill="both")
         scroll_txt4.pack(expand=1, fill="both")
-        lbl2.place(x=10, y=event.height - 80)
-        out_file_edit.place(x=100, y=event.height - 80, width=event.width - 110)
+        lbl2.place(x=10, y=event.height - 80, width=70)
+        out_file_edit.place(x=90, y=event.height - 80, width=event.width - 100)
         global bottom_bar_y
         bottom_bar_y = event.height - 50
         btn2.place(x=10, y=bottom_bar_y, width=60)
@@ -707,6 +845,8 @@ def top_window_resized(event):
         btn1.place(x=event.width - 95, y=10, width=50)
         btn3.place(x=event.width - 150, y=10, width=50)
         btn4.place(x=event.width - 265, y=10, width=110)
+        checkbox_help.place(x=10, y=10, width=50)
+        checkbox_preview.place(x=70, y=10, width=70)
 
         load_rules_from_profile()
 
@@ -730,6 +870,12 @@ popup_menu.add_command(label="About", command=about_app)
 btn1 = Button(window, text="Add", fg='blue', command=browse_in_excel)
 btn3 = Button(window, text="Clear", fg='blue', command=clear_in_files)
 btn4 = Button(window, text="Select All Numeric", fg='blue', command=select_all_numeric_cols_in_list)
+
+help_var = IntVar()
+checkbox_help = Checkbutton(window, text="Help", fg='blue', variable=help_var, command=help_button_clicked)
+
+preview_var = IntVar()
+checkbox_preview = Checkbutton(window, text="Preview", fg='blue', variable=preview_var, command=preview_button_clicked)
 
 tabControl = ttk.Notebook(window)
 tabControl.bind('<<NotebookTabChanged>>', tab_changed)
@@ -770,8 +916,22 @@ scroll_txt3.bind("<<Modified>>", include_if_text_changed)
 scroll_txt4 = ScrolledText(tab6, wrap="none")
 scroll_txt4.bind("<<Modified>>", rules_text_changed)
 
-lbl2 = Label(window, text="Output Excel")
-out_file_text = tk.StringVar()
+lbl1 = Label(window, text="Help", anchor='w')
+scroll_txt5 = ScrolledText(window, bg='#f0f0f0', border=0)
+scroll_txt5.config(state='disabled')
+
+preview_frame = Frame(window)
+preview_vsb = Scrollbar(preview_frame)
+preview_vsb.pack(side=RIGHT, fill=Y)
+preview_hsb = Scrollbar(preview_frame, orient='horizontal')
+preview_hsb.pack(side=BOTTOM, fill=X)
+preview = ttk.Treeview(preview_frame, yscrollcommand=preview_vsb.set, xscrollcommand=preview_hsb.set)
+preview.pack(fill=BOTH, expand=True)
+preview_vsb.config(command=preview.yview)
+preview_hsb.config(command=preview.xview)
+
+lbl2 = Label(window, text="Output Excel", anchor='w')
+out_file_text = StringVar()
 if len(out_file_name) > 0 and os.path.exists(out_file_name):
     out_file_text.set(out_file_name)
 else:
@@ -788,11 +948,11 @@ pb = ttk.Progressbar(
     mode='determinate',
     length=0
 )
-status_text = tk.StringVar()
+status_text = StringVar()
 status = Label(window, text="", textvariable=status_text, anchor='w')
 
 window.title('SPC')
-window.geometry("600x400")
+window.geometry("1000x600")
 window.mainloop()
 set_exit_flag(True)
 

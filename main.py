@@ -139,6 +139,11 @@ def get_rules():
     return rules
 
 
+def get_df():
+    global df
+    return df
+
+
 def clear():
     global df
     global summary_df
@@ -163,19 +168,6 @@ def clear():
     del_cols = []
     # remove_if_str = ''
     # include_if_str = ''
-
-# [
-#     'Approach of teachers during the PTM.',
-#     'Satisfaction levels on responses/replies received from teachers.',
-#     'Approach of PROs.',
-#     'Responsiveness & approach of the Admin Team',
-#     'Overall happiness of the child in School',
-#     'a) Academic subjects transaction',
-#     'b) Activity classes transaction',
-#     'c) Class Teacher’s approach\n',
-#     'd) Subject Teacher’s Approach',
-#     'e) Written work/ Assignments'
-# ]
 
 
 def is_int(s):
@@ -245,6 +237,7 @@ def apply_rules_on_column(df1, col_name):
 
 
 def apply_rules():
+    reset_df()
     if get_df_updated() and (len(rules) > 0):
         global df
         df.reset_index(inplace=True, drop=True)
