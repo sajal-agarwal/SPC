@@ -20,6 +20,8 @@ df_updated = False
 remove_if_str = ''
 include_if_str = ''
 rules = {}
+sheet_columns = []
+
 progress_lock = threading.Lock()
 error_lock = threading.Lock()
 exit_flag_lock = threading.Lock()
@@ -104,6 +106,11 @@ def set_deleted_cols_str(cols):
     del_cols = cols
 
 
+def set_sheet_cols_str(cols):
+    global sheet_columns
+    sheet_columns = cols
+
+
 def get_deleted_cols():
     global del_cols
     return del_cols
@@ -142,6 +149,17 @@ def get_rules():
 def get_df():
     global df
     return df
+
+
+def set_sheet_columns(cols):
+    global columns
+    global sheet_columns
+    sheet_columns = [columns[col] for col in cols]
+
+
+def get_sheet_columns():
+    global sheet_columns
+    return sheet_columns
 
 
 def clear():
@@ -398,10 +416,16 @@ def do_work(in_paths, out_path):
 
         axl.append_df_to_excel(out_path, df, sheet_name='MasterSheet')
 
-        classes = df['Class'] + '-' + df['Section']
-        classes.drop_duplicates(inplace=True)
-        classes.sort_values(inplace=True)
-        classes.reset_index(inplace=True, drop=True)
+        classes = []
+        for col in sheet_columns:
+            if len(classes) == 0:
+                classes = df[col].astype(str).values.tolist()
+                continue
+
+            classes = ["{}-{}".format(a, b) for a, b in zip(classes, df[col])]
+
+        classes = list(set(classes))
+        classes.sort()
 
         is_summary_needed = (len(avg_cols) > 0)
 
@@ -414,11 +438,18 @@ def do_work(in_paths, out_path):
                 break
 
             cl_sec = c.split('-')
-            cl_df = df[(df['Class'] == cl_sec[0]) & (df['Section'] == cl_sec[1])]
+            choices = [True]*len(df)
+            for col, val in zip(sheet_columns, cl_sec):
+                choices = (df[col] == val)
+
+            cl_df = df[choices]
             for col in avg_cols:
                 update_average(cl_df, col)
 
-            row_name = (cl_sec[0] + cl_sec[1])
+            row_name = ''
+            for val in cl_sec:
+                row_name += val
+
             if is_summary_needed:
                 av_ser = cl_df.iloc[-1]
                 av_ser = av_ser[~av_ser.isnull()]
@@ -427,7 +458,7 @@ def do_work(in_paths, out_path):
             axl.append_df_to_excel(out_path, cl_df, sheet_name=row_name)
 
             counter += 1
-            set_progress(counter*100/(classes.size + 1))
+            set_progress(counter*100/(len(classes) + 1))
 
         count_df = get_count_df()
         if is_summary_needed:

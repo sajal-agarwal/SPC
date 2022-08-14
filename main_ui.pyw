@@ -31,11 +31,14 @@ clear_msg_on_tab_change = False
 summary_window = None
 rsf_index = 0  # Right Side Frame index
 app_help = {}
+global do_not_show_summary_var
+cur_settings = {}
 
 app_data_path = os.path.join(os.getenv('APPDATA'), 'SPC')  # School Performance Calculator
 if not os.path.exists(app_data_path):
     os.makedirs(app_data_path)
 default_profile_file = os.path.join(app_data_path, 'default_profile.json')
+settings_file = os.path.join(app_data_path, 'settings.json')
 
 help_file_name = './help/help.json'
 try:
@@ -47,6 +50,12 @@ except Exception as err:
 try:
     with open(default_profile_file, 'r') as f:
         cur_profile = json.load(f)
+except Exception as err:
+    logging.error(err)
+
+try:
+    with open(settings_file, 'r') as f:
+        cur_settings = json.load(f)
 except Exception as err:
     logging.error(err)
 
@@ -67,6 +76,9 @@ def load_selection_info_from_default_profile():
 
     set_deleted_cols_str(cur_profile.get('rem_sel_cache', []))
     update_rem_sel_view()
+
+    set_sheet_cols_str(cur_profile.get('sheet_sel_cache', []))
+    update_sheet_sel_view()
 
 
 def load_rem_inc_if_from_default_profile():
@@ -137,10 +149,16 @@ def get_summary():
     summary_window.geometry("600x600")
     summary_window.grab_set()
 
-    btn = Button(summary_window, text='OK', fg='blue', width=4, command=summary_ok_clicked)
-    btn.pack(side=BOTTOM, pady=6)
+    btn_frame = Frame(summary_window)
+    btn_frame.pack(fill=X, side=BOTTOM, pady=16)
+    btn = Button(btn_frame, text='OK', fg='blue', command=summary_ok_clicked)
+    btn.pack(side=RIGHT, padx=16, ipadx=10)
+    btn = Button(btn_frame, text='Cancel', fg='blue', command=lambda: summary_window.destroy())
+    btn.pack(side=RIGHT, ipadx=10)
+    do_not_show_cb = Checkbutton(btn_frame, text='Do not show again', fg='blue', variable=do_not_show_summary_var)
+    do_not_show_cb.pack(side=LEFT)
     st = ScrolledText(summary_window)
-    st.pack(expand=1, fill=BOTH, side=BOTTOM, pady=4)
+    st.pack(expand=1, fill=BOTH, side=BOTTOM)
     st.tag_config('heading', font=tbf_heading)
     st.insert(END, 'Input files:', 'heading')
 
@@ -163,6 +181,10 @@ def get_summary():
 
     st.insert(END, '\n\nRules to be applied:', 'heading')
     st.insert(END, '\n' + scroll_txt4.get(0.1, END).strip())
+
+    st.insert(END, '\n\nColumns for dividing sheets:', 'heading')
+    for col in get_sheet_columns():
+        st.insert(END, '\n' + col)
 
 
 def trigger_generation():
@@ -222,10 +244,14 @@ def generate_out_excel():
 
     set_deleted_cols(listbox.curselection())
     set_average_cols(listbox2.curselection())
+    set_sheet_columns(listbox3.curselection())
     set_remove_if_str(scroll_txt2.get(0.1, END))
     set_include_if_str(scroll_txt3.get(0.1, END))
 
-    get_summary()
+    if do_not_show_summary_var.get():
+        trigger_generation()
+    else:
+        get_summary()
 
 
 def save_to_default_profile():
@@ -237,6 +263,7 @@ def save_profile_to_file(file_name):
     cur_profile['out_file_name'] = out_file_name
     cur_profile['avg_sel_cache'] = get_avg_columns()
     cur_profile['rem_sel_cache'] = get_deleted_cols()
+    cur_profile['sheet_sel_cache'] = get_sheet_columns()
     cur_profile['remove_if_str'] = get_remove_if_str()
     cur_profile['include_if_str'] = get_include_if_str()
     cur_profile['rules'] = scroll_txt4.get(0.1, END).strip()
@@ -289,6 +316,7 @@ def update_columns():
             for col in cols:
                 listbox.insert(index, col)
                 listbox2.insert(index, col)
+                listbox3.insert(index, col)
                 index += 1
             load_selection_info_from_default_profile()
             update_rules()
@@ -331,6 +359,7 @@ def load_in_files(filenames):
 
     listbox.delete(0, END)
     listbox2.delete(0, END)
+    listbox3.delete(0, END)
 
     btn2.configure(state='disabled')
 
@@ -362,6 +391,7 @@ def clear_in_files():
         scroll_txt.configure(state='disabled')
         listbox.delete(0, END)
         listbox2.delete(0, END)
+        listbox3.delete(0, END)
         clear_preview()
         clear()
     elif cur_tab == 3:
@@ -387,6 +417,14 @@ def update_rem_sel_view():
     for col in rem_cols:
         listbox.selection_set(cols.index(col))
     on_rem_listbox_selection_changed()
+
+
+def update_sheet_sel_view():
+    sheet_cols = get_sheet_columns()
+    cols = get_columns()
+    for col in sheet_cols:
+        index = cols.index(col)
+        listbox3.selection_set(index)
 
 
 def select_all_numeric_cols_in_list():
@@ -472,6 +510,17 @@ def on_listbox_selection_changed2(evt):
         return
 
     on_avg_listbox_selection_changed()
+
+
+def on_sheet_listbox_selection_changed():
+    set_sheet_columns(listbox3.curselection())
+
+
+def on_listbox_selection_changed3(evt):
+    if evt.widget != listbox3:
+        return
+
+    on_sheet_listbox_selection_changed()
 
 
 def update_help():
@@ -637,7 +686,7 @@ def update_rules():
         for rule in rules_list:
             kv = rule.split('=')
             if len(kv) > 1:
-                v = ''
+                # v = ''
                 cols = []
                 has_not = False
                 if ':' in kv[1]:
@@ -818,6 +867,21 @@ file with well organized data in different sheets and plots.
 Contact shipragupta89@gmail.com for more details.''')
 
 
+def on_closing():
+    try:
+        settings_dict = {
+            'do_not_show_summary_var': do_not_show_summary_var.get(),
+            'win_width': win_width,
+            'win_height': win_height
+        }
+        with open(settings_file, 'w') as file:
+            json.dump(settings_dict, file, indent=4)
+    except Exception as err1:
+        logging.error(err1)
+
+    window.destroy()
+
+
 def top_window_resized(event):
     global win_width
     global win_height
@@ -826,8 +890,6 @@ def top_window_resized(event):
         win_height = event.height
         update_center_view()
         scroll_txt.pack(expand=1, fill="both")
-        listbox.pack(side=LEFT, expand=1, fill="both")
-        listbox2.pack(side=LEFT, expand=1, fill="both")
         scroll_txt2.pack(expand=1, fill="both")
         scroll_txt3.pack(expand=1, fill="both")
         scroll_txt4.pack(expand=1, fill="both")
@@ -856,14 +918,20 @@ load_paths_from_default_profile()
 window = TkinterDnD.Tk()
 window.drop_target_register(DND_FILES)
 
+do_not_show_summary_var = BooleanVar()
+do_not_show_summary_var.set(cur_settings.get('do_not_show_summary_var', False))
+
 window.bind("<Configure>", top_window_resized)
 window.dnd_bind('<<Drop>>', files_dropped)
+window.protocol("WM_DELETE_WINDOW", on_closing)
 
 settings_photo = PhotoImage(file=r".\icons\settings.png")
 settings_btn = Button(window, text="Settings", fg='blue', image=settings_photo, command=settings_btn_clicked)
 popup_menu = Menu(window, tearoff=0)
 popup_menu.add_command(label="Save Profile", command=save_profile_to_user_file)
 popup_menu.add_command(label="Load Profile", command=load_profile_from_user_file)
+popup_menu.add_separator()
+popup_menu.add_checkbutton(label='Do not show summary window', variable=do_not_show_summary_var)
 popup_menu.add_separator()
 popup_menu.add_command(label="About", command=about_app)
 
@@ -885,12 +953,14 @@ tab3 = ttk.Frame(tabControl)
 tab4 = ttk.Frame(tabControl)
 tab5 = ttk.Frame(tabControl)
 tab6 = ttk.Frame(tabControl)
+tab7 = ttk.Frame(tabControl)
 tabControl.add(tab1, text='Input Excel')
 tabControl.add(tab2, text='Remove Column')
 tabControl.add(tab3, text='Average Column')
 tabControl.add(tab4, text='Remove If')
 tabControl.add(tab5, text='Include If')
 tabControl.add(tab6, text='Rules')
+tabControl.add(tab7, text='Sheets Column')
 
 scroll_txt = ScrolledText(tab1, wrap="none")
 scroll_txt.config(state=DISABLED)
@@ -898,12 +968,14 @@ scroll_txt.config(state=DISABLED)
 scrollbar = Scrollbar(tab2)
 scrollbar.pack(side=RIGHT, fill=Y)
 listbox = Listbox(tab2, selectmode=MULTIPLE, exportselection=0, yscrollcommand=scrollbar.set)
+listbox.pack(side=LEFT, expand=1, fill="both")
 listbox.bind('<<ListboxSelect>>', on_listbox_selection_changed1)
 scrollbar.config(command=listbox.yview)
 
 scrollbar2 = Scrollbar(tab3)
 scrollbar2.pack(side=RIGHT, fill=Y)
 listbox2 = Listbox(tab3, selectmode=MULTIPLE, exportselection=0, yscrollcommand=scrollbar2.set)
+listbox2.pack(side=LEFT, expand=1, fill="both")
 listbox2.bind('<<ListboxSelect>>', on_listbox_selection_changed2)
 scrollbar2.config(command=listbox2.yview)
 
@@ -930,6 +1002,13 @@ preview.pack(fill=BOTH, expand=True)
 preview_vsb.config(command=preview.yview)
 preview_hsb.config(command=preview.xview)
 
+scrollbar3 = Scrollbar(tab7)
+scrollbar3.pack(side=RIGHT, fill=Y)
+listbox3 = Listbox(tab7, selectmode=MULTIPLE, exportselection=0, yscrollcommand=scrollbar2.set)
+listbox3.pack(side=LEFT, expand=1, fill="both")
+listbox3.bind('<<ListboxSelect>>', on_listbox_selection_changed3)
+scrollbar3.config(command=listbox3.yview)
+
 lbl2 = Label(window, text="Output Excel", anchor='w')
 out_file_text = StringVar()
 if len(out_file_name) > 0 and os.path.exists(out_file_name):
@@ -952,7 +1031,9 @@ status_text = StringVar()
 status = Label(window, text="", textvariable=status_text, anchor='w')
 
 window.title('SPC')
-window.geometry("1000x600")
+window_width = cur_settings.get('win_width', 1000)
+window_height = cur_settings.get('win_height', 600)
+window.geometry("{}x{}".format(window_width, window_height))
 window.mainloop()
 set_exit_flag(True)
 
