@@ -11,7 +11,6 @@ import json
 from tkinter import messagebox
 import tkinter.font as tk_font
 
-
 bottom_bar_y = 150
 in_filenames = []
 in_file_last_dir = ''
@@ -33,6 +32,8 @@ rsf_index = 0  # Right Side Frame index
 app_help = {}
 global do_not_show_summary_var
 cur_settings = {}
+rule_err = ''
+rem_inc_if_err = ''
 
 app_data_path = os.path.join(os.getenv('APPDATA'), 'SPC')  # School Performance Calculator
 if not os.path.exists(app_data_path):
@@ -128,9 +129,9 @@ def load_profile_from_file(file_name):
 
 
 def set_input_file_names(text):
-    scroll_txt.configure(state='normal')
-    scroll_txt.insert(END, text)
-    scroll_txt.configure(state='disabled')
+    # scroll_txt.configure(state='normal')
+    listbox_infile.insert(END, text)
+    # scroll_txt.configure(state='disabled')
 
 
 def summary_ok_clicked():
@@ -180,11 +181,43 @@ def get_summary():
     st.insert(END, get_include_if_str())
 
     st.insert(END, '\n\nRules to be applied:', 'heading')
-    st.insert(END, '\n' + scroll_txt4.get(0.1, END).strip())
+    if len(rule_err) == 0:
+        st.insert(END, '\n' + scroll_txt4.get(0.1, END).strip())
 
     st.insert(END, '\n\nColumns for dividing sheets:', 'heading')
     for col in get_sheet_columns():
         st.insert(END, '\n' + col)
+
+
+def enable_all():
+    btn1.config(state='normal')
+    cur_tab = tabControl.index(tabControl.select())
+    btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6) else 'normal'))
+    btn4.config(state=('normal' if (cur_tab == 2) else 'disabled'))
+    btn5.config(state=('normal' if (cur_tab == 1) and (len(listbox_infile.curselection()) > 0) else 'disabled'))
+    listbox_infile.bindtags(('.!notebook.!frame2.!listbox_infile', 'Listbox', '.', 'all'))
+    listbox.bindtags(('.!notebook.!frame2.!listbox', 'Listbox', '.', 'all'))
+    listbox2.bindtags(('.!notebook.!frame2.!listbox2', 'Listbox', '.', 'all'))
+    listbox3.bindtags(('.!notebook.!frame2.!listbox3', 'Listbox', '.', 'all'))
+    scroll_txt2.config(state='normal' if (len(scroll_txt3.get(0.1, END).strip()) == 0) and
+                                         (not generation_in_progress) else 'disabled')
+    scroll_txt3.config(state='normal' if (len(scroll_txt2.get(0.1, END).strip()) == 0) and
+                                         (not generation_in_progress) else 'disabled')
+    scroll_txt4.config(state='normal')
+
+
+def disable_all():
+    btn1.config(state='disabled')
+    btn3.config(state='disabled')
+    btn4.config(state='disabled')
+    btn5.config(state='disabled')
+    listbox_infile.bindtags((listbox_infile, window, "all"))
+    listbox.bindtags((listbox, window, "all"))
+    listbox2.bindtags((listbox2, window, "all"))
+    listbox3.bindtags((listbox3, window, "all"))
+    scroll_txt2.config(state='disabled')
+    scroll_txt3.config(state='disabled')
+    scroll_txt4.config(state='disabled')
 
 
 def trigger_generation():
@@ -193,9 +226,10 @@ def trigger_generation():
 
     pb.place(x=75, y=bottom_bar_y + 1, width=win_width - 115, height=24)
     status.place(x=(win_width - 40), y=bottom_bar_y, width=30, height=24)
-    status_text.set('')
     status.config(fg='black')
+    status_text.set('')
     btn2['text'] = 'Stop'
+    disable_all()
 
     global worker_thread
     set_progress(0)
@@ -231,22 +265,37 @@ def generate_out_excel():
         status_text.set('Provide an output file name!')
         return
 
-    dir_name = os.path.dirname(out_file_name)
-    if not os.path.exists(dir_name):
+    dir_name1 = os.path.dirname(out_file_name)
+    if not os.path.exists(dir_name1):
         status.config(fg='red')
         status_text.set('Output file directory does not exist!')
         return
 
-    if not os.access(dir_name, os.W_OK | os.X_OK):
+    if not os.access(dir_name1, os.W_OK | os.X_OK):
         status.config(fg='red')
         status_text.set('No permission!')
+        return
+
+    rem_str = scroll_txt2.get(0.1, END).strip()
+    inc_str = scroll_txt3.get(0.1, END).strip()
+
+    err_msg = ''
+    if len(rule_err) > 0:
+        err_msg += 'Invalid rules - ' + rule_err + '\n\n'
+
+    if len(rem_inc_if_err) > 0:
+        err_msg += 'Invalid ' + ('\'Remove' if len(rem_str) > 0 else '\'Include') + \
+                   ' If\' conditions - ' + rem_inc_if_err
+
+    if len(err_msg) > 0:
+        messagebox.showerror('Generate', err_msg)
         return
 
     set_deleted_cols(listbox.curselection())
     set_average_cols(listbox2.curselection())
     set_sheet_columns(listbox3.curselection())
-    set_remove_if_str(scroll_txt2.get(0.1, END))
-    set_include_if_str(scroll_txt3.get(0.1, END))
+    set_remove_if_str(rem_str)
+    set_include_if_str(inc_str)
 
     if do_not_show_summary_var.get():
         trigger_generation()
@@ -289,6 +338,7 @@ def update_progress_fun():
         if err2 == '':
             status.config(fg='green')
             if generation_aborted:
+                btn2.configure(state='normal')
                 status_text.set('Aborted successfully!')
                 os.remove(out_file_name)
                 generation_aborted = False
@@ -302,7 +352,8 @@ def update_progress_fun():
             status_text.set(err2)
 
         btn2['text'] = 'Generate'
-        btn2.configure(state='normal')
+        enable_all()
+
         global generation_in_progress
         generation_in_progress = False
 
@@ -328,6 +379,20 @@ def update_columns():
         btn2.configure(state='normal')
     else:
         window.after(progress_bar_update_interval, update_columns)
+
+
+def trigger_update_columns():
+    listbox.delete(0, END)
+    listbox2.delete(0, END)
+    listbox3.delete(0, END)
+
+    btn2.configure(state='disabled')
+
+    global worker_thread2
+    worker_thread2 = Thread(target=update_df, args=(in_filenames,))
+    worker_thread2.start()
+
+    window.after(progress_bar_update_interval, update_columns)
 
 
 def load_in_files(filenames):
@@ -357,17 +422,7 @@ def load_in_files(filenames):
     global in_file_last_dir
     in_file_last_dir = os.path.dirname(in_filenames[-1])
 
-    listbox.delete(0, END)
-    listbox2.delete(0, END)
-    listbox3.delete(0, END)
-
-    btn2.configure(state='disabled')
-
-    global worker_thread2
-    worker_thread2 = Thread(target=update_df, args=(in_filenames,))
-    worker_thread2.start()
-
-    window.after(progress_bar_update_interval, update_columns)
+    trigger_update_columns()
 
 
 def browse_in_excel():
@@ -386,14 +441,13 @@ def clear_in_files():
 
     if cur_tab == 0:
         in_filenames.clear()
-        scroll_txt.configure(state='normal')
-        scroll_txt.delete('1.0', END)
-        scroll_txt.configure(state='disabled')
+        listbox_infile.delete(0, END)
         listbox.delete(0, END)
         listbox2.delete(0, END)
         listbox3.delete(0, END)
         clear_preview()
         clear()
+        update_rules()
     elif cur_tab == 3:
         scroll_txt2.delete('1.0', END)
     elif cur_tab == 4:
@@ -406,8 +460,8 @@ def update_avg_sel_view():
     average_cols = get_avg_columns()
     cols = get_columns()
     for col in average_cols:
-        index = cols.index(col)
-        listbox2.selection_set(index)
+        if col in cols:
+            listbox2.selection_set(cols.index(col))
     on_avg_listbox_selection_changed()
 
 
@@ -415,7 +469,8 @@ def update_rem_sel_view():
     rem_cols = get_deleted_cols()
     cols = get_columns()
     for col in rem_cols:
-        listbox.selection_set(cols.index(col))
+        if col in cols:
+            listbox.selection_set(cols.index(col))
     on_rem_listbox_selection_changed()
 
 
@@ -423,8 +478,8 @@ def update_sheet_sel_view():
     sheet_cols = get_sheet_columns()
     cols = get_columns()
     for col in sheet_cols:
-        index = cols.index(col)
-        listbox3.selection_set(index)
+        if col in cols:
+            listbox3.selection_set(cols.index(col))
 
 
 def select_all_numeric_cols_in_list():
@@ -435,6 +490,16 @@ def select_all_numeric_cols_in_list():
     for col in average_cols:
         listbox2.selection_set(cols.index(col))
     on_avg_listbox_selection_changed()
+
+
+def remove_btn_clicked():
+    if_indices = list(listbox_infile.curselection())
+    if_indices.sort(reverse=True)
+    for index in if_indices:
+        in_filenames.pop(index)
+        listbox_infile.delete(index)
+    btn5.config(state='disabled')
+    trigger_update_columns()
 
 
 def clear_status():
@@ -473,6 +538,18 @@ def on_avg_listbox_selection_changed():
 
         set_deleted_cols(listbox.curselection())
         update_preview()
+
+
+def on_infile_listbox_selection_changed():
+    cs = listbox_infile.curselection()
+    btn5.config(state='normal' if len(cs) > 0 else 'disabled')
+
+
+def on_listbox_selection_changed(evt):
+    if evt.widget != listbox_infile:
+        return
+
+    on_infile_listbox_selection_changed()
 
 
 def on_rem_listbox_selection_changed():
@@ -540,9 +617,11 @@ def clear_preview():
 def update_preview():
     if rsf_index & 2:
         clear_preview()
-        do_remove_if()
-        do_include_if()
-        delete_columns()
+        if not generation_in_progress:
+            apply_rules()
+            do_remove_if()
+            do_include_if()
+            delete_columns()
         preview['columns'] = get_df().columns.tolist()
         anchor_pos = 'w'
         preview.column("#0", width=0, stretch=NO)
@@ -556,7 +635,6 @@ def update_preview():
             preview.insert(parent='', index='end', iid=index, text='', values=get_df().iloc[index].to_list())
             index += 1
 
-        reset_df()
         apply_rules()
 
 
@@ -572,11 +650,10 @@ def tab_changed(evt):
         status.config(fg='black')
         status_text.set('')
 
-    if cur_tab == 2:
-        btn4.configure(state='normal')
-    elif cur_tab == 3:
+    if cur_tab == 3:
         if len(scroll_txt3.get(0.1, END).strip()) == 0:
-            scroll_txt2.configure(state='normal')
+            if not generation_in_progress:
+                scroll_txt2.configure(state='normal')
         else:
             scroll_txt2.configure(state='disabled')
             status.config(fg='orange')
@@ -584,7 +661,8 @@ def tab_changed(evt):
             clear_msg_on_tab_change = True
     elif cur_tab == 4:
         if len(scroll_txt2.get(0.1, END).strip()) == 0:
-            scroll_txt3.configure(state='normal')
+            if not generation_in_progress:
+                scroll_txt3.config(state='normal')
         else:
             scroll_txt3.configure(state='disabled')
             status.config(fg='orange')
@@ -593,38 +671,37 @@ def tab_changed(evt):
     elif cur_tab == 5:
         if len(get_rules()) == 0:
             update_rules()
-    else:
-        btn4.configure(state='disabled')
 
-    btn3.configure(state=('disabled' if (cur_tab == 1 or cur_tab == 2) else 'normal'))
-    btn4.configure(state=('normal' if (cur_tab == 2) else 'disabled'))
+    btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6
+                                      or generation_in_progress) else 'normal'))
+    btn4.config(state=('normal' if ((cur_tab == 2) and not generation_in_progress) else 'disabled'))
+
+    btn5.config(state=('normal' if (cur_tab == 1) and (len(listbox_infile.curselection()) > 0)
+                                   and (not generation_in_progress) else 'disabled'))
 
     update_help()
 
 
 def validate_rem_inc_if_str(rem_str):
-    rem_str = rem_str.strip()
-    if len(rem_str) == 0:
-        return
-
     success = True
-    err_msg = 'Invalid condition!'
-
-    conditions = rem_str.split('\n')
-    for cond in conditions:
-        cond = cond.strip()
-        if '==' in cond:
-            cond_list = cond.split('==')
-            if len(cond_list) < 2:
-                success = False
-                err_msg = 'Right hand value missing'
-            else:
-                if cond_list[0] not in get_columns():
+    rem_str = rem_str.strip()
+    err_msg = ''
+    if len(rem_str) > 0:
+        conditions = rem_str.split('\n')
+        for cond in conditions:
+            cond = cond.strip()
+            if '==' in cond:
+                cond_list = cond.split('==')
+                if len(cond_list) < 2:
                     success = False
-                    err_msg = 'Column name \'' + cond_list[0] + '\' not found'
-        else:
-            success = False
-            err_msg = '== operator is missing'
+                    err_msg = 'Right hand value missing'
+                else:
+                    if cond_list[0] not in get_columns():
+                        success = False
+                        err_msg = 'Column name \'' + cond_list[0] + '\' not found'
+            else:
+                success = False
+                err_msg = '== operator is missing'
 
     if success:
         status.configure(fg='black')
@@ -632,6 +709,9 @@ def validate_rem_inc_if_str(rem_str):
     else:
         status.configure(fg='red')
         status_text.set(err_msg)
+
+    global rem_inc_if_err
+    rem_inc_if_err = err_msg
 
     return success
 
@@ -674,7 +754,7 @@ def include_if_text_changed(evt):
 
 def update_rules():
     success = True
-    err_msg = 'Invalid rule!'
+    err_msg = ''
     dict1 = {}
     rules_str = scroll_txt4.get(0., END).strip()
     if len(rules_str) > 0:
@@ -767,6 +847,9 @@ def update_rules():
         status.config(fg='red')
         status_text.set(err_msg)
 
+    global rule_err
+    rule_err = err_msg
+
     if (old_rules != get_rules()) and get_df_updated():
         apply_rules()
         update_preview()
@@ -804,6 +887,10 @@ def load_profile_from_user_file():
 
 
 def files_dropped(evt):
+    if generation_in_progress:
+        messagebox.showinfo('File drop', 'Previous task is still running, stop it to add more files.')
+        return
+
     xl_files = []
     files = window.tk.splitlist(evt.data)
     for file in files:
@@ -812,6 +899,10 @@ def files_dropped(evt):
 
     if len(xl_files) > 0:
         load_in_files(xl_files)
+
+    for file in files:
+        if file.lower().endswith(".json"):
+            load_profile_from_file(file)
 
 
 def update_center_view():
@@ -871,9 +962,12 @@ def on_closing():
     try:
         settings_dict = {
             'do_not_show_summary_var': do_not_show_summary_var.get(),
-            'win_width': win_width,
-            'win_height': win_height
         }
+
+        if window.state() != 'zoomed':
+            settings_dict['win_width'] = win_width
+            settings_dict['win_height'] = win_height
+
         with open(settings_file, 'w') as file:
             json.dump(settings_dict, file, indent=4)
     except Exception as err1:
@@ -889,7 +983,6 @@ def top_window_resized(event):
         win_width = event.width
         win_height = event.height
         update_center_view()
-        scroll_txt.pack(expand=1, fill="both")
         scroll_txt2.pack(expand=1, fill="both")
         scroll_txt3.pack(expand=1, fill="both")
         scroll_txt4.pack(expand=1, fill="both")
@@ -907,6 +1000,7 @@ def top_window_resized(event):
         btn1.place(x=event.width - 95, y=10, width=50)
         btn3.place(x=event.width - 150, y=10, width=50)
         btn4.place(x=event.width - 265, y=10, width=110)
+        btn5.place(x=event.width - 330, y=10, width=60)
         checkbox_help.place(x=10, y=10, width=50)
         checkbox_preview.place(x=70, y=10, width=70)
 
@@ -938,6 +1032,7 @@ popup_menu.add_command(label="About", command=about_app)
 btn1 = Button(window, text="Add", fg='blue', command=browse_in_excel)
 btn3 = Button(window, text="Clear", fg='blue', command=clear_in_files)
 btn4 = Button(window, text="Select All Numeric", fg='blue', command=select_all_numeric_cols_in_list)
+btn5 = Button(window, text="Remove", fg='blue', command=remove_btn_clicked)
 
 help_var = IntVar()
 checkbox_help = Checkbutton(window, text="Help", fg='blue', variable=help_var, command=help_button_clicked)
@@ -955,21 +1050,24 @@ tab5 = ttk.Frame(tabControl)
 tab6 = ttk.Frame(tabControl)
 tab7 = ttk.Frame(tabControl)
 tabControl.add(tab1, text='Input Excel')
-tabControl.add(tab2, text='Remove Column')
-tabControl.add(tab3, text='Average Column')
+tabControl.add(tab2, text='Remove Columns')
+tabControl.add(tab3, text='Average Columns')
 tabControl.add(tab4, text='Remove If')
 tabControl.add(tab5, text='Include If')
 tabControl.add(tab6, text='Rules')
-tabControl.add(tab7, text='Sheets Column')
+tabControl.add(tab7, text='Sheets Columns')
 
-scroll_txt = ScrolledText(tab1, wrap="none")
-scroll_txt.config(state=DISABLED)
+scrollbar_infile = Scrollbar(tab1)
+scrollbar_infile.pack(side=RIGHT, fill=Y)
+listbox_infile = Listbox(tab1, selectmode=MULTIPLE, exportselection=0, yscrollcommand=scrollbar_infile.set)
+listbox_infile.pack(side=LEFT, expand=1, fill="both")
+listbox_infile.bind('<<ListboxSelect>>', on_listbox_selection_changed)
+scrollbar_infile.config(command=listbox_infile.yview)
 
 scrollbar = Scrollbar(tab2)
 scrollbar.pack(side=RIGHT, fill=Y)
 listbox = Listbox(tab2, selectmode=MULTIPLE, exportselection=0, yscrollcommand=scrollbar.set)
 listbox.pack(side=LEFT, expand=1, fill="both")
-listbox.bind('<<ListboxSelect>>', on_listbox_selection_changed1)
 scrollbar.config(command=listbox.yview)
 
 scrollbar2 = Scrollbar(tab3)
@@ -1011,13 +1109,19 @@ scrollbar3.config(command=listbox3.yview)
 
 lbl2 = Label(window, text="Output Excel", anchor='w')
 out_file_text = StringVar()
-if len(out_file_name) > 0 and os.path.exists(out_file_name):
-    out_file_text.set(out_file_name)
-else:
+if len(out_file_name) > 0:
+    if os.path.exists(out_file_name):
+        out_file_text.set(out_file_name)
+    else:
+        dir_name = os.path.dirname(out_file_name)
+        if os.path.exists(dir_name):
+            out_file_text.set(os.path.join(dir_name, 'out.xlsx'))
+
+if len(out_file_text.get().strip()) == 0:
     desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
     if os.path.isdir(desktop):
-        os.path.join(desktop, 'Result.xlsx')
-        out_file_text.set(desktop)
+        out_file_text.set(os.path.join(desktop, 'out.xlsx'))
+
 out_file_edit = Entry(window, textvariable=out_file_text)
 
 btn2 = Button(window, text="Generate", fg='blue', command=generate_out_excel)

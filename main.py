@@ -1,5 +1,5 @@
+import pandas
 import pandas as pd
-from openpyxl import load_workbook
 import append_toexcel as axl
 import threading
 import math
@@ -209,6 +209,7 @@ def update_average(cl_df, col_name):
 
 
 def select_all_numeric_cols():
+    apply_rules()
     if get_df_updated():
         global avg_cols
         avg_cols.clear()
@@ -246,12 +247,10 @@ def apply_rules_on_column(df1, col_name):
     if len(rules) == 0:
         return
 
-    global tmp_col_rules
-    tmp_col_rules = rules[col_name]
-    if len(tmp_col_rules) == 0:
-        return
-
-    df1[col_name] = df[col_name].apply(get_val_from_rule)
+    if col_name in rules:
+        global tmp_col_rules
+        tmp_col_rules = rules[col_name]
+        df1[col_name] = df[col_name].apply(get_val_from_rule)
 
 
 def apply_rules():
@@ -275,15 +274,14 @@ def update_df(in_paths):
             if get_exit_flag():
                 break
 
-            untouched_df = untouched_df.append(pd.read_excel(in_path))
+            untouched_df = pandas.concat([untouched_df, pd.read_excel(in_path)])
 
         global columns
         columns = untouched_df.columns.to_list()
+        set_df_updated(True)
     except Exception as e:
         set_last_error(e)
         success = False
-
-    set_df_updated(True)
 
     df = untouched_df.copy()
 
@@ -387,7 +385,7 @@ def do_include_if():
                 if len(cond_list) == 0:
                     raise Exception("")
 
-                new_df = new_df.append(df[[(str(i) == cond_list[1]) for i in df[cond_list[0]]]])
+                new_df = pandas.concat([new_df, df[[(str(i) == cond_list[1]) for i in df[cond_list[0]]]]])
             else:
                 raise Exception('')
         df = new_df
@@ -405,6 +403,8 @@ def do_work(in_paths, out_path):
 
         if not get_df_updated():
             update_df(in_paths)
+        else:
+            apply_rules()
 
         delete_columns()
 
@@ -440,7 +440,7 @@ def do_work(in_paths, out_path):
             cl_sec = c.split('-')
             choices = [True]*len(df)
             for col, val in zip(sheet_columns, cl_sec):
-                choices = (df[col] == val)
+                choices &= (df[col] == val)
 
             cl_df = df[choices]
             for col in avg_cols:
@@ -460,20 +460,22 @@ def do_work(in_paths, out_path):
             counter += 1
             set_progress(counter*100/(len(classes) + 1))
 
-        count_df = get_count_df()
-        if is_summary_needed:
-            avg_of_avg = summary_df.mean().round(decimals=2)
-            count_df.loc['Weighted Average'] = avg_of_avg
-            summary_df.loc['Average'] = avg_of_avg
-            axl.append_df_to_excel(out_path, summary_df, sheet_name='Summary')
+        if not get_exit_flag():
+            count_df = get_count_df()
+            if is_summary_needed:
+                if len(classes) > 0:
+                    avg_of_avg = summary_df.mean().round(decimals=2)
+                    count_df.loc['Weighted Average'] = avg_of_avg
+                    summary_df.loc['Average'] = avg_of_avg
+                    axl.append_df_to_excel(out_path, summary_df, sheet_name='Summary')
+                else:
+                    for col in avg_cols:
+                        update_average(df, col)
 
-        axl.append_df_to_excel(out_path, count_df, sheet_name='Counts', startrow=0, startcol=0)
-        # book = load_workbook(out_path)
-        # writer = pd.ExcelWriter(out_path, engine='openpyxl')
-        # writer.book = book
-        # writer.sheets = dict((ws.title, ws) for ws in book.worksheets)
-        # count_df.to_excel(writer, "Counts", startrow=0, startcol=0)
-        # writer.save()
+                    count_df.loc['Weighted Average'] = df.loc['Average']
+                    df.drop(df.index[-1], inplace=True)
+
+            axl.append_df_to_excel(out_path, count_df, sheet_name='Counts', startrow=0, startcol=0)
 
         print('Done!!!')
     except Exception as e:
@@ -481,5 +483,4 @@ def do_work(in_paths, out_path):
         success = False
 
     set_progress(100)
-    set_df_updated(False)
     return success
