@@ -193,11 +193,6 @@ def enable_all():
     btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6) else 'normal'))
     btn4.config(state=('normal' if (cur_tab == 2) else 'disabled'))
     btn5.config(state=('normal' if (cur_tab == 1) and (len(listbox_infile.curselection()) > 0) else 'disabled'))
-    settings_btn.bindtags(('.!button', 'Button', '.', 'all'))
-    listbox_infile.bindtags(('.!notebook.!frame2.!listbox_infile', 'Listbox', '.', 'all'))
-    listbox.bindtags(('.!notebook.!frame2.!listbox', 'Listbox', '.', 'all'))
-    listbox2.bindtags(('.!notebook.!frame2.!listbox2', 'Listbox', '.', 'all'))
-    listbox3.bindtags(('.!notebook.!frame2.!listbox3', 'Listbox', '.', 'all'))
     scroll_txt2.config(state='normal' if (len(scroll_txt3.get(0.1, END).strip()) == 0) and
                                          (not generation_in_progress) else 'disabled')
     scroll_txt3.config(state='normal' if (len(scroll_txt2.get(0.1, END).strip()) == 0) and
@@ -210,11 +205,6 @@ def disable_all():
     btn3.config(state='disabled')
     btn4.config(state='disabled')
     btn5.config(state='disabled')
-    settings_btn.bindtags((settings_btn, window, "all"))
-    listbox_infile.bindtags((listbox_infile, window, "all"))
-    listbox.bindtags((listbox, window, "all"))
-    listbox2.bindtags((listbox2, window, "all"))
-    listbox3.bindtags((listbox3, window, "all"))
     scroll_txt2.config(state='disabled')
     scroll_txt3.config(state='disabled')
     scroll_txt4.config(state='disabled')
@@ -229,7 +219,7 @@ def trigger_generation():
     status.config(fg='black')
     status_text.set('')
     btn2['text'] = 'Stop'
-    # disable_all()
+    disable_all()
 
     global worker_thread
     set_progress(0)
@@ -331,6 +321,9 @@ def update_progress_fun():
     if p < 100:
         window.after(progress_bar_update_interval, update_progress_fun)
     else:
+        global generation_in_progress
+        generation_in_progress = False
+
         pb.stop()
         pb.place(x=75, y=52, width=0, height=0)
         status.place(x=75, y=bottom_bar_y, width=375, height=24)
@@ -352,10 +345,7 @@ def update_progress_fun():
             status_text.set(err2)
 
         btn2['text'] = 'Generate'
-        # enable_all()
-
-        global generation_in_progress
-        generation_in_progress = False
+        enable_all()
 
 
 def stop_indeterminate_pb():
@@ -367,6 +357,9 @@ def stop_indeterminate_pb():
 
 def update_columns():
     if get_df_updated():
+        global generation_in_progress
+        generation_in_progress = False
+
         err1 = get_last_error()
         if err1 == '':
             index = 1
@@ -384,12 +377,12 @@ def update_columns():
             update_remove_if_cond()
             update_include_if_cond()
             update_preview()
-            # enable_all()
         else:
             status.config(fg='red')
             status_text.set(err1)
 
         btn2.configure(state='normal')
+        enable_all()
     else:
         window.after(progress_bar_update_interval, update_columns)
 
@@ -409,9 +402,12 @@ def trigger_update_columns():
     listbox3.delete(0, END)
 
     btn2.configure(state='disabled')
-    # disable_all()
+    disable_all()
 
     start_indeterminate_pb()
+
+    global generation_in_progress
+    generation_in_progress = True
 
     global worker_thread2
     worker_thread2 = Thread(target=update_df, args=(in_filenames,))
@@ -623,11 +619,33 @@ def on_listbox_selection_changed1(evt):
     if evt.widget != listbox:
         return
 
+    if generation_in_progress:
+        revert_selection_change(listbox, get_deleted_cols())
+        messagebox.showinfo('Remove Columns', 'A task is currently running, wait for it to finish or stop it.')
+        return
+
     on_rem_listbox_selection_changed()
+
+
+def revert_selection_change(lb, prev):
+    cur = lb.curselection()
+    prev = [get_columns().index(i) for i in prev]
+    for i in cur:
+        if i not in prev:
+            lb.selection_clear(i)
+
+    for i in prev:
+        if i not in cur:
+            lb.selection_set(i)
 
 
 def on_listbox_selection_changed2(evt):
     if evt.widget != listbox2:
+        return
+
+    if generation_in_progress:
+        revert_selection_change(listbox2, get_avg_columns())
+        messagebox.showinfo('Average Columns', 'A task is currently running, wait for it to finish or stop it.')
         return
 
     on_avg_listbox_selection_changed()
@@ -639,6 +657,11 @@ def on_sheet_listbox_selection_changed():
 
 def on_listbox_selection_changed3(evt):
     if evt.widget != listbox3:
+        return
+
+    if generation_in_progress:
+        revert_selection_change(listbox3, get_sheet_columns())
+        messagebox.showinfo('Sheet Columns', 'A task is currently running, wait for it to finish or stop it.')
         return
 
     on_sheet_listbox_selection_changed()
@@ -919,6 +942,7 @@ def update_rules():
 
 
 def rules_text_changed(evt):
+    global scroll_txt4
     if evt.widget != scroll_txt4:
         return
 
@@ -926,6 +950,10 @@ def rules_text_changed(evt):
 
 
 def settings_btn_clicked():
+    if generation_in_progress:
+        messagebox.showinfo('Settings', 'A task is currently running, wait for it to finish or stop it.')
+        return
+
     try:
         popup_menu.tk_popup(settings_btn.winfo_rootx(), settings_btn.winfo_rooty() + 28)
     finally:
@@ -1127,6 +1155,7 @@ scrollbar = Scrollbar(tab2)
 scrollbar.pack(side=RIGHT, fill=Y)
 listbox = Listbox(tab2, selectmode=MULTIPLE, exportselection=0, yscrollcommand=scrollbar.set)
 listbox.pack(side=LEFT, expand=1, fill="both")
+listbox.bind('<<ListboxSelect>>', on_listbox_selection_changed1)
 scrollbar.config(command=listbox.yview)
 
 scrollbar2 = Scrollbar(tab3)
@@ -1136,13 +1165,13 @@ listbox2.pack(side=LEFT, expand=1, fill="both")
 listbox2.bind('<<ListboxSelect>>', on_listbox_selection_changed2)
 scrollbar2.config(command=listbox2.yview)
 
-scroll_txt2 = ScrolledText(tab4, wrap="none")
+scroll_txt2 = ScrolledText(tab4, wrap="none", undo=True, autoseparators=True, maxundo=-1)
 scroll_txt2.bind("<<Modified>>", remove_if_text_changed)
 
-scroll_txt3 = ScrolledText(tab5, wrap="none")
+scroll_txt3 = ScrolledText(tab5, wrap="none", undo=True, autoseparators=True, maxundo=-1)
 scroll_txt3.bind("<<Modified>>", include_if_text_changed)
 
-scroll_txt4 = ScrolledText(tab6, wrap="none")
+scroll_txt4 = ScrolledText(tab6, wrap="none", undo=True, autoseparators=True, maxundo=-1)
 scroll_txt4.bind("<<Modified>>", rules_text_changed)
 
 lbl1 = Label(window, text="Help", anchor='w')
