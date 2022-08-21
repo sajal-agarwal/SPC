@@ -1104,7 +1104,7 @@ scroll_txt4 = ScrolledText(tab6, wrap="none")
 scroll_txt4.bind("<<Modified>>", rules_text_changed)
 
 lbl1 = Label(window, text="Help", anchor='w')
-scroll_txt5 = ScrolledText(window, bg='#f0f0f0', border=0)
+scroll_txt5 = ScrolledText(window, bg='#f0f0f0', border=0, wrap=WORD)
 scroll_txt5.config(state='disabled')
 
 preview_frame = Frame(window)
