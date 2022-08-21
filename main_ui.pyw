@@ -1,4 +1,3 @@
-from faulthandler import disable
 import logging
 from main import *
 from tkinter import *
@@ -230,7 +229,7 @@ def trigger_generation():
     status.config(fg='black')
     status_text.set('')
     btn2['text'] = 'Stop'
-    disable_all()
+    # disable_all()
 
     global worker_thread
     set_progress(0)
@@ -353,10 +352,17 @@ def update_progress_fun():
             status_text.set(err2)
 
         btn2['text'] = 'Generate'
-        enable_all()
+        # enable_all()
 
         global generation_in_progress
         generation_in_progress = False
+
+
+def stop_indeterminate_pb():
+    pb.stop()
+    pb['mode'] = 'determinate'
+    pb.place(x=75, y=52, width=0, height=0)
+    status.place(x=75, y=bottom_bar_y, width=375, height=24)
 
 
 def update_columns():
@@ -371,17 +377,14 @@ def update_columns():
                 listbox3.insert(index, col)
                 index += 1
 
-            pb.stop()
-            pb['mode'] = 'determinate'
-            pb.place(x=75, y=52, width=0, height=0)
-            status.place(x=75, y=bottom_bar_y, width=375, height=24)
+            stop_indeterminate_pb()
 
             update_rules()
             load_selection_info_from_default_profile()
             update_remove_if_cond()
             update_include_if_cond()
             update_preview()
-            enable_all()
+            # enable_all()
         else:
             status.config(fg='red')
             status_text.set(err1)
@@ -391,20 +394,24 @@ def update_columns():
         window.after(progress_bar_update_interval, update_columns)
 
 
-def trigger_update_columns():
-    listbox.delete(0, END)
-    listbox2.delete(0, END)
-    listbox3.delete(0, END)
-
-    btn2.configure(state='disabled')
-    disable_all()
-
+def start_indeterminate_pb():
     pb['mode'] = 'indeterminate'
     pb.place(x=75, y=bottom_bar_y + 1, width=win_width - 85, height=24)
     status.place(x=win_width, y=bottom_bar_y, width=0, height=0)
     status.config(fg='black')
     status_text.set('')
     pb.start()
+
+
+def trigger_update_columns():
+    listbox.delete(0, END)
+    listbox2.delete(0, END)
+    listbox3.delete(0, END)
+
+    btn2.configure(state='disabled')
+    # disable_all()
+
+    start_indeterminate_pb()
 
     global worker_thread2
     worker_thread2 = Thread(target=update_df, args=(in_filenames,))
