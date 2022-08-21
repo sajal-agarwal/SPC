@@ -129,9 +129,7 @@ def load_profile_from_file(file_name):
 
 
 def set_input_file_names(text):
-    # scroll_txt.configure(state='normal')
     listbox_infile.insert(END, text)
-    # scroll_txt.configure(state='disabled')
 
 
 def summary_ok_clicked():
