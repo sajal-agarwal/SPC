@@ -1,0 +1,29 @@
+{
+    "in_file_last_dir": "C:/Users/sjlkg/PycharmProjects/TSUSPTMDATA/data",
+    "out_file_name": "C:\\Users\\sjlkg\\PycharmProjects\\TSUSPTMDATA\\data\\out.xlsx",
+    "avg_sel_cache": [
+        "Approach of teachers during the PTM.",
+        "Satisfaction levels on responses/replies received from teachers.",
+        "Approach of PROs.",
+        "Responsiveness & approach of the Admin Team",
+        "Overall happiness of the child in School",
+        "a) Academic subjects transaction",
+        "b) Activity classes transaction",
+        "c) Class Teacher\u2019s approach\n",
+        "d) Subject Teacher\u2019s Approach",
+        "e) Written work/ Assignments"
+    ],
+    "rem_sel_cache": [
+        "ID",
+        "Completion time",
+        "Email",
+        "Name"
+    ],
+    "remove_if_str": "",
+    "include_if_str": "",
+    "rules": "Outstanding=10:13,14,15,16,17\nExcellent=9:13,14,15,16,17\nGood=8:13,14,15,16,17\nAverage=7:13,14,15,16,17\nPoor=6:13,14,15,16,17\nVery Poor=5:13,14,15,16,17",
+    "sheet_sel_cache": [
+        "Class",
+        "Section"
+    ]
+}
