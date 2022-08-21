@@ -371,6 +371,8 @@ def update_columns():
                 index += 1
             load_selection_info_from_default_profile()
             update_rules()
+            update_remove_if_cond()
+            update_include_if_cond()
             update_preview()
         else:
             status.config(fg='red')
@@ -448,6 +450,8 @@ def clear_in_files():
         clear_preview()
         clear()
         update_rules()
+        update_remove_if_cond()
+        update_include_if_cond()
     elif cur_tab == 3:
         scroll_txt2.delete('1.0', END)
     elif cur_tab == 4:
@@ -654,6 +658,9 @@ def tab_changed(evt):
         if len(scroll_txt3.get(0.1, END).strip()) == 0:
             if not generation_in_progress:
                 scroll_txt2.configure(state='normal')
+                if len(rem_inc_if_err) > 0:
+                    status.config(fg='red')
+                    status_text.set(rem_inc_if_err)
         else:
             scroll_txt2.configure(state='disabled')
             status.config(fg='orange')
@@ -663,14 +670,18 @@ def tab_changed(evt):
         if len(scroll_txt2.get(0.1, END).strip()) == 0:
             if not generation_in_progress:
                 scroll_txt3.config(state='normal')
+                if len(rem_inc_if_err) > 0:
+                    status.config(fg='red')
+                    status_text.set(rem_inc_if_err)
         else:
             scroll_txt3.configure(state='disabled')
             status.config(fg='orange')
             status_text.set('Remove all the conditions from "Remove If" tab to add condition(s) here!')
             clear_msg_on_tab_change = True
     elif cur_tab == 5:
-        if len(get_rules()) == 0:
-            update_rules()
+        if len(rule_err) > 0:
+            status.config(fg='red')
+            status_text.set(rule_err)
 
     btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6
                                       or generation_in_progress) else 'normal'))
@@ -716,22 +727,34 @@ def validate_rem_inc_if_str(rem_str):
     return success
 
 
-def remove_if_text_changed(evt):
-    if evt.widget != scroll_txt2:
-        return
-
-    old_rem_str = get_remove_if_str()
-
+def update_remove_if_cond():
     rem_str = scroll_txt2.get(0., END)
     if validate_rem_inc_if_str(rem_str):
         set_remove_if_str(rem_str)
     else:
         set_remove_if_str('')
 
+
+def remove_if_text_changed(evt):
+    if evt.widget != scroll_txt2:
+        return
+
+    old_rem_str = get_remove_if_str()
+
+    update_remove_if_cond()
+
     if old_rem_str != get_remove_if_str():
         update_preview()
 
     scroll_txt2.edit_modified(False)  # reset to detect next change
+
+
+def update_include_if_cond():
+    inc_str = scroll_txt3.get(0., END)
+    if validate_rem_inc_if_str(inc_str):
+        set_include_if_str(inc_str)
+    else:
+        set_include_if_str('')
 
 
 def include_if_text_changed(evt):
@@ -740,11 +763,7 @@ def include_if_text_changed(evt):
 
     old_inc_str = get_include_if_str()
 
-    inc_str = scroll_txt3.get(0., END)
-    if validate_rem_inc_if_str(inc_str):
-        set_include_if_str(inc_str)
-    else:
-        set_include_if_str('')
+    update_include_if_cond()
 
     if old_inc_str != get_include_if_str():
         update_preview()
