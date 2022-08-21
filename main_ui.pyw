@@ -370,6 +370,12 @@ def update_columns():
                 listbox2.insert(index, col)
                 listbox3.insert(index, col)
                 index += 1
+
+            pb.stop()
+            pb['mode'] = 'determinate'
+            pb.place(x=75, y=52, width=0, height=0)
+            status.place(x=75, y=bottom_bar_y, width=375, height=24)
+
             update_rules()
             load_selection_info_from_default_profile()
             update_remove_if_cond()
@@ -392,6 +398,13 @@ def trigger_update_columns():
 
     btn2.configure(state='disabled')
     disable_all()
+
+    pb['mode'] = 'indeterminate'
+    pb.place(x=75, y=bottom_bar_y + 1, width=win_width - 85, height=24)
+    status.place(x=win_width, y=bottom_bar_y, width=0, height=0)
+    status.config(fg='black')
+    status_text.set('')
+    pb.start()
 
     global worker_thread2
     worker_thread2 = Thread(target=update_df, args=(in_filenames,))
