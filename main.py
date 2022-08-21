@@ -228,7 +228,7 @@ def is_column_numeric(col):
     if not is_numeric:
         for item in df[col]:
             if (not isinstance(item, (int, float))) and (not isinstance(item, str) or (not is_str_numeric(item))):
-                faulty_row = row_index + 2 # +1 for header, +1 to convert rwo index to row number
+                faulty_row = row_index + 2 # +1 for header, +1 to convert row index to row number
                 break
 
             row_index += 1
