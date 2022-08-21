@@ -367,8 +367,8 @@ def update_columns():
                 listbox2.insert(index, col)
                 listbox3.insert(index, col)
                 index += 1
-            load_selection_info_from_default_profile()
             update_rules()
+            load_selection_info_from_default_profile()
             update_remove_if_cond()
             update_include_if_cond()
             update_preview()
@@ -524,14 +524,31 @@ def on_avg_listbox_selection_changed():
     sel = listbox2.curselection()
     sel2 = listbox.curselection()
     clear_items = ''
+    non_numeric_cols = ''
+    non_numeric_col_indexes = []
     count = 0
     for item in sel:
+        col_name = get_columns()[item]
+        is_numeric = is_column_numeric(col_name)
+        if not is_numeric[0]:
+            non_numeric_cols += '\n' + col_name + ': ' + str(is_numeric[1])
+            non_numeric_col_indexes.append(item)
+
         if item in sel2:
-            clear_items += (', ' if len(clear_items) > 0 else '') + get_columns()[item]
+            clear_items += (', ' if len(clear_items) > 0 else '') + col_name
             count += 1
         listbox.selection_clear(item)
 
     set_average_cols(listbox2.curselection())
+
+    if len(non_numeric_cols) > 0:
+        for item in non_numeric_col_indexes:
+            listbox2.selection_clear(item)
+
+        messagebox.showwarning('Average Columns', 'Some selected column' +
+                               (' ' if len(non_numeric_col_indexes) == 1 else 's ') +
+                               ('is' if len(non_numeric_col_indexes) == 1 else 'are') +
+                               ' not numeric so can\'t be selected -' + non_numeric_cols)
 
     if len(clear_items) != 0:
         status.config(fg='orange')

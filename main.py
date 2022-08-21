@@ -204,8 +204,36 @@ def is_float(s):
         return False
 
 
+def is_str_numeric(s):
+    return is_int(s) or is_float(s)
+
+
 def update_average(cl_df, col_name):
     cl_df.at['Average', col_name] = round(cl_df[col_name].mean(), 2)
+
+
+def is_column_numeric(col):
+    global df
+    is_numeric = True
+    count_nan = 0
+    for item in df[col]:
+        if not isinstance(item, (int, float)):
+            is_numeric = False
+            break
+        elif math.isnan(item):
+            count_nan += 1
+
+    faulty_row = -1
+    row_index = 0
+    if not is_numeric:
+        for item in df[col]:
+            if (not isinstance(item, (int, float))) and (not isinstance(item, str) or (not is_str_numeric(item))):
+                faulty_row = row_index + 2 # +1 for header, +1 to convert rwo index to row number
+                break
+
+            row_index += 1
+
+    return is_numeric and (count_nan < df[col].size), faulty_row
 
 
 def select_all_numeric_cols():
@@ -214,16 +242,7 @@ def select_all_numeric_cols():
         global avg_cols
         avg_cols.clear()
         for col in columns:
-            is_numeric = True
-            count_nan = 0
-            for item in df[col]:
-                if not isinstance(item, (int, float)):
-                    is_numeric = False
-                    break
-                elif math.isnan(item):
-                    count_nan += 1
-
-            if is_numeric and (count_nan < df[col].size):
+            if is_column_numeric(col)[0]:
                 avg_cols.append(col)
 
 
