@@ -1,3 +1,4 @@
+from faulthandler import disable
 import logging
 from main import *
 from tkinter import *
@@ -193,6 +194,7 @@ def enable_all():
     btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6) else 'normal'))
     btn4.config(state=('normal' if (cur_tab == 2) else 'disabled'))
     btn5.config(state=('normal' if (cur_tab == 1) and (len(listbox_infile.curselection()) > 0) else 'disabled'))
+    settings_btn.bindtags(('.!button', 'Button', '.', 'all'))
     listbox_infile.bindtags(('.!notebook.!frame2.!listbox_infile', 'Listbox', '.', 'all'))
     listbox.bindtags(('.!notebook.!frame2.!listbox', 'Listbox', '.', 'all'))
     listbox2.bindtags(('.!notebook.!frame2.!listbox2', 'Listbox', '.', 'all'))
@@ -209,6 +211,7 @@ def disable_all():
     btn3.config(state='disabled')
     btn4.config(state='disabled')
     btn5.config(state='disabled')
+    settings_btn.bindtags((settings_btn, window, "all"))
     listbox_infile.bindtags((listbox_infile, window, "all"))
     listbox.bindtags((listbox, window, "all"))
     listbox2.bindtags((listbox2, window, "all"))
@@ -372,6 +375,7 @@ def update_columns():
             update_remove_if_cond()
             update_include_if_cond()
             update_preview()
+            enable_all()
         else:
             status.config(fg='red')
             status_text.set(err1)
@@ -387,6 +391,7 @@ def trigger_update_columns():
     listbox3.delete(0, END)
 
     btn2.configure(state='disabled')
+    disable_all()
 
     global worker_thread2
     worker_thread2 = Thread(target=update_df, args=(in_filenames,))
