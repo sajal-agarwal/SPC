@@ -433,7 +433,7 @@ def do_work(in_paths, out_path):
 
         create_output_file_from_template(out_path)
 
-        axl.append_df_to_excel(out_path, df, sheet_name='MasterSheet')
+        axl.append_df_to_excel(out_path, df, sheet_name='MasterSheet', index=False)
 
         classes = []
         for col in sheet_columns:
@@ -462,6 +462,7 @@ def do_work(in_paths, out_path):
                 choices &= (df[col] == val)
 
             cl_df = df[choices]
+            cl_df.reset_index(inplace=True, drop=True)
             for col in avg_cols:
                 update_average(cl_df, col)
 
