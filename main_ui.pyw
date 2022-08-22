@@ -117,7 +117,7 @@ def load_profile_from_file(file_name):
         with open(file_name) as file:
             cur_profile = json.load(file)
     except Exception as e:
-        status_text.set(e)
+        messagebox.showerror('Load Profile', str(e))
         return False
 
     load_paths_from_default_profile()
@@ -128,7 +128,7 @@ def load_profile_from_file(file_name):
     return True
 
 
-def set_input_file_names(text):
+def append_input_file_names(text):
     listbox_infile.insert(END, text)
 
 
@@ -298,17 +298,19 @@ def save_to_default_profile():
 
 
 def save_profile_to_file(file_name):
-    cur_profile['in_file_last_dir'] = in_file_last_dir
-    cur_profile['out_file_name'] = out_file_name
-    cur_profile['avg_sel_cache'] = get_avg_columns()
-    cur_profile['rem_sel_cache'] = get_deleted_cols()
-    cur_profile['sheet_sel_cache'] = get_sheet_columns()
-    cur_profile['remove_if_str'] = get_remove_if_str()
-    cur_profile['include_if_str'] = get_include_if_str()
-    cur_profile['rules'] = scroll_txt4.get(0.1, END).strip()
-
-    with open(file_name, 'w') as file:
-        json.dump(cur_profile, file, indent=4)
+    try:
+        with open(file_name, 'w') as file:
+            cur_profile['in_file_last_dir'] = in_file_last_dir
+            cur_profile['out_file_name'] = out_file_name
+            cur_profile['avg_sel_cache'] = get_avg_columns()
+            cur_profile['rem_sel_cache'] = get_deleted_cols()
+            cur_profile['sheet_sel_cache'] = get_sheet_columns()
+            cur_profile['remove_if_str'] = get_remove_if_str()
+            cur_profile['include_if_str'] = get_include_if_str()
+            cur_profile['rules'] = scroll_txt4.get(0.1, END).strip()
+            json.dump(cur_profile, file, indent=4)
+    except Exception as err:
+        messagebox.showerror('Save Profile', str(err))
 
 
 def update_progress_fun():
@@ -426,7 +428,7 @@ def load_in_files(filenames):
     for filename in filenames:
         if filename not in in_filenames:
             no_new_file_added = False
-            set_input_file_names(filename + '\n')
+            append_input_file_names(filename + '\n')
             in_filenames.append(filename)
         else:
             some_files_already_added = True
@@ -879,9 +881,15 @@ def update_rules():
                     cols2 = []
                     for col in cols:
                         if is_int(col[1:]):
-                            col_index = int(col[1:])
+                            col_num = int(col[1:])
+                            if col_num < 1:
+                                err_msg = 'Column number must be greater than 0'
+                                success = False
+                                break
+
+                            col_index = col_num - 1
                             if col_index >= len(get_columns()):
-                                err_msg = 'Column index ' + str(col_index) + ' not found'
+                                err_msg = 'Column number ' + str(col_index) + ' not found'
                                 success = False
                                 break
                             cols2.append(get_columns()[col_index])
@@ -901,9 +909,15 @@ def update_rules():
                 else:
                     for col in cols:
                         if is_int(col):
-                            col_index = int(col)
+                            col_num = int(col)
+                            if col_num < 1:
+                                err_msg = 'Column number must be greater than 0'
+                                success = False
+                                break
+
+                            col_index = col_num - 1
                             if col_index >= len(get_columns()):
-                                err_msg = 'Column index ' + str(col_index) + ' not found'
+                                err_msg = 'Column number ' + str(col_num) + ' not found'
                                 success = False
                                 break
                             col = get_columns()[col_index]
@@ -961,16 +975,19 @@ def settings_btn_clicked():
 
 
 def save_profile_to_user_file():
-    f1 = filedialog.asksaveasfilename(initialfile='Untitled.json', defaultextension='.json',
+    file_name = filedialog.asksaveasfilename(initialfile='Untitled.json', defaultextension='.json',
                                       filetypes=[('Json File', '*.json')])
-    save_profile_to_file(f1)
+
+    if len(file_name) > 0:
+        save_profile_to_file(file_name)
 
 
 def load_profile_from_user_file():
     file_name = filedialog.askopenfilename(initialdir=profile_dir, title="Select a File",
                                            filetypes=(("Json File", '*.json'),))
 
-    load_profile_from_file(file_name)
+    if len(file_name) > 0:
+        load_profile_from_file(file_name)
 
 
 def files_dropped(evt):
