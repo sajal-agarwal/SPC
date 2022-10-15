@@ -192,7 +192,7 @@ def enable_all():
     cur_tab = tabControl.index(tabControl.select())
     btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6) else 'normal'))
     btn4.config(state=('normal' if (cur_tab == 2) else 'disabled'))
-    btn5.config(state=('normal' if (cur_tab == 1) and (len(listbox_infile.curselection()) > 0) else 'disabled'))
+    btn5.config(state=('normal' if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0) else 'disabled'))
     scroll_txt2.config(state='normal' if (len(scroll_txt3.get(0.1, END).strip()) == 0) and
                                          (not generation_in_progress) else 'disabled')
     scroll_txt3.config(state='normal' if (len(scroll_txt2.get(0.1, END).strip()) == 0) and
@@ -306,8 +306,8 @@ def save_profile_to_file(file_name):
             cur_profile['include_if_str'] = get_include_if_str()
             cur_profile['rules'] = scroll_txt4.get(0.1, END).strip()
             json.dump(cur_profile, file, indent=4)
-    except Exception as err:
-        messagebox.showerror('Save Profile', str(err))
+    except Exception as e:
+        messagebox.showerror('Save Profile', str(e))
 
 
 def update_progress_fun():
@@ -342,8 +342,6 @@ def update_progress_fun():
         else:
             status.config(fg='red')
             status_text.set(err2)
-
-        update_df(in_paths)
 
         btn2['text'] = 'Generate'
         enable_all()
@@ -751,7 +749,7 @@ def tab_changed(evt):
                                       or generation_in_progress) else 'normal'))
     btn4.config(state=('normal' if ((cur_tab == 2) and not generation_in_progress) else 'disabled'))
 
-    btn5.config(state=('normal' if (cur_tab == 1) and (len(listbox_infile.curselection()) > 0)
+    btn5.config(state=('normal' if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0)
                                    and (not generation_in_progress) else 'disabled'))
 
     update_help()
@@ -766,9 +764,9 @@ def validate_rem_inc_if_str(rem_str):
         for cond in conditions:
             if cond == '':
                 continue
-            
+
             empty = False
-            
+
             if '==' in cond:
                 cond_list = cond.split('==')
                 if len(cond_list) < 2:
@@ -985,7 +983,7 @@ def settings_btn_clicked():
 
 def save_profile_to_user_file():
     file_name = filedialog.asksaveasfilename(initialfile='Untitled.json', defaultextension='.json',
-                                      filetypes=[('Json File', '*.json')])
+                                             filetypes=[('Json File', '*.json')])
 
     if len(file_name) > 0:
         save_profile_to_file(file_name)

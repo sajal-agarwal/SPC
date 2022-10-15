@@ -457,6 +457,7 @@ def do_work(in_paths, out_path):
         if is_summary_needed:
             summary_df = pd.DataFrame(columns=avg_cols, index=[str1.replace("-", "") for str1 in classes])
 
+        max_count = (len(classes) + 2)
         counter = 0
         for c in classes:
             if get_exit_flag():
@@ -484,7 +485,7 @@ def do_work(in_paths, out_path):
             axl.append_df_to_excel(out_path, cl_df, sheet_name=row_name)
 
             counter += 1
-            set_progress(counter*100/(len(classes) + 1))
+            set_progress(counter*100/max_count)
 
         if not get_exit_flag():
             count_df = get_count_df()
@@ -501,12 +502,15 @@ def do_work(in_paths, out_path):
                     count_df.loc['Weighted Average'] = df.loc['Average']
                     df.drop(df.index[-1], inplace=True)
 
-            axl.append_df_to_excel(out_path, count_df, sheet_name='Counts', startrow=0, startcol=0)
+            counter += 1
+            set_progress(counter*100/max_count)
 
-        print('Done!!!')
+            axl.append_df_to_excel(out_path, count_df, sheet_name='Counts', startrow=0, startcol=0)
     except Exception as e:
         set_last_error(e)
         success = False
+
+    update_df(in_paths)
 
     set_progress(100)
     return success
