@@ -212,6 +212,13 @@ def update_average(cl_df, col_name):
     cl_df.at['Average', col_name] = round(cl_df[col_name].mean(), 2)
 
 
+def is_val_exits_in_column(col, val):
+    for item in df[col]:
+        if val == str(item):
+            return True
+    return False
+
+
 def is_column_numeric(col):
     global df
     is_numeric = True

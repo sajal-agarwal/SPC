@@ -760,12 +760,13 @@ def tab_changed(evt):
 
 def validate_rem_inc_if_str(rem_str):
     success = True
-    rem_str = rem_str.strip()
     err_msg = ''
     if len(rem_str) > 0:
         conditions = rem_str.split('\n')
         for cond in conditions:
-            cond = cond.strip()
+            if cond == '':
+                continue
+
             if '==' in cond:
                 cond_list = cond.split('==')
                 if len(cond_list) < 2:
@@ -775,6 +776,12 @@ def validate_rem_inc_if_str(rem_str):
                     if cond_list[0] not in get_columns():
                         success = False
                         err_msg = 'Column name \'' + cond_list[0] + '\' not found'
+                        break
+
+                    if not is_val_exits_in_column(cond_list[0], cond_list[1]):
+                        success = False
+                        err_msg = 'Column value \'' + cond_list[1] + '\' not found'
+                        break
             else:
                 success = False
                 err_msg = '== operator is missing'
