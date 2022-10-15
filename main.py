@@ -123,7 +123,7 @@ def get_remove_if_str():
 
 def set_remove_if_str(rem_str):
     global remove_if_str
-    remove_if_str = rem_str.strip()
+    remove_if_str = rem_str
 
 
 def get_include_if_str():
@@ -133,7 +133,7 @@ def get_include_if_str():
 
 def set_include_if_str(add_str):
     global include_if_str
-    include_if_str = add_str.strip()
+    include_if_str = add_str
 
 
 def set_rules(r):
@@ -297,9 +297,6 @@ def update_df(in_paths):
     try:
         untouched_df = pd.DataFrame()
         for in_path in in_paths:
-            if get_exit_flag():
-                break
-
             untouched_df = pandas.concat([untouched_df, pd.read_excel(in_path)])
 
         global columns
@@ -348,14 +345,15 @@ def do_remove_if():
     global df
     global remove_if_str
 
-    remove_if_str = remove_if_str.strip()
-
     if len(remove_if_str) == 0:
         return
 
     conditions = remove_if_str.split('\n')
     try:
         for cond in conditions:
+            if cond == '':
+                continue
+
             if '==' in cond:
                 cond_list = cond.split('==')
                 if len(cond_list) == 0:
@@ -397,8 +395,6 @@ def do_include_if():
     global df
     global include_if_str
 
-    include_if_str = include_if_str.strip()
-
     if len(include_if_str) == 0:
         return
 
@@ -406,6 +402,9 @@ def do_include_if():
     new_df = pd.DataFrame()
     try:
         for cond in conditions:
+            if cond == '':
+                continue
+
             if '==' in cond:
                 cond_list = cond.split('==')
                 if len(cond_list) == 0:

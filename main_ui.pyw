@@ -266,26 +266,23 @@ def generate_out_excel():
         status_text.set('No permission!')
         return
 
-    rem_str = scroll_txt2.get(0.1, END).strip()
-    inc_str = scroll_txt3.get(0.1, END).strip()
+    set_deleted_cols(listbox.curselection())
+    set_average_cols(listbox2.curselection())
+    set_sheet_columns(listbox3.curselection())
+    update_remove_if_cond()
+    update_include_if_cond()
 
     err_msg = ''
     if len(rule_err) > 0:
         err_msg += 'Invalid rules - ' + rule_err + '\n\n'
 
     if len(rem_inc_if_err) > 0:
-        err_msg += 'Invalid ' + ('\'Remove' if len(rem_str) > 0 else '\'Include') + \
+        err_msg += 'Invalid ' + ('\'Remove' if len(scroll_txt2.get(0.1, END).strip()) > 0 else '\'Include') + \
                    ' If\' conditions - ' + rem_inc_if_err
 
     if len(err_msg) > 0:
         messagebox.showerror('Generate', err_msg)
         return
-
-    set_deleted_cols(listbox.curselection())
-    set_average_cols(listbox2.curselection())
-    set_sheet_columns(listbox3.curselection())
-    set_remove_if_str(rem_str)
-    set_include_if_str(inc_str)
 
     if do_not_show_summary_var.get():
         trigger_generation()
@@ -345,6 +342,8 @@ def update_progress_fun():
         else:
             status.config(fg='red')
             status_text.set(err2)
+
+        update_df(in_paths)
 
         btn2['text'] = 'Generate'
         enable_all()
@@ -759,6 +758,7 @@ def tab_changed(evt):
 
 
 def validate_rem_inc_if_str(rem_str):
+    empty = True
     success = True
     err_msg = ''
     if len(rem_str) > 0:
@@ -766,7 +766,9 @@ def validate_rem_inc_if_str(rem_str):
         for cond in conditions:
             if cond == '':
                 continue
-
+            
+            empty = False
+            
             if '==' in cond:
                 cond_list = cond.split('==')
                 if len(cond_list) < 2:
@@ -796,7 +798,7 @@ def validate_rem_inc_if_str(rem_str):
     global rem_inc_if_err
     rem_inc_if_err = err_msg
 
-    return success
+    return ((not empty) and success)
 
 
 def update_remove_if_cond():
