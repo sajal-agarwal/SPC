@@ -1,6 +1,5 @@
 import pandas
 import pandas as pd
-import append_toexcel as axl
 import threading
 import math
 import shutil
@@ -13,12 +12,12 @@ df = pd.DataFrame()
 untouched_df = pd.DataFrame()
 summary_df = pd.DataFrame()
 columns = []
-last_err_str = ''
+last_err_str: str = ''
 progress = 0
 exit_flag = False
 df_updated = False
-remove_if_str = ''
-include_if_str = ''
+remove_if_str: str = ''
+include_if_str: str = ''
 rules = {}
 sheet_columns = []
 
@@ -235,7 +234,7 @@ def is_column_numeric(col):
     if not is_numeric:
         for item in df[col]:
             if (not isinstance(item, (int, float))) and (not isinstance(item, str) or (not is_str_numeric(item))):
-                faulty_row = row_index + 2 # +1 for header, +1 to convert row index to row number
+                faulty_row = row_index + 2  # +1 for header, +1 to convert row index to row number
                 break
 
             row_index += 1
@@ -257,6 +256,9 @@ tmp_col_rules = {}
 
 
 def get_val_from_rule(str1):
+    if isinstance(str1, float) and math.isnan(str1):
+        str1 = str(str1)
+
     val = tmp_col_rules.get(str1, '')
     if len(val) > 0:
         if is_int(val):
@@ -322,7 +324,8 @@ def reset_df():
 def delete_columns():
     global del_cols
     for col in del_cols:
-        df.drop(col, inplace=True, axis=1)
+        if col in df:
+            df.drop(col, inplace=True, axis=1)
 
 
 def create_output_file_from_template(out_file):
@@ -439,7 +442,8 @@ def do_work(in_paths, out_path):
 
         create_output_file_from_template(out_path)
 
-        axl.append_df_to_excel(out_path, df, sheet_name='MasterSheet', index=False)
+        with pd.ExcelWriter(out_path, mode="a") as writer:
+            df.to_excel(writer, sheet_name='MasterSheet', index=False)
 
         classes = []
         for col in sheet_columns:
@@ -482,7 +486,8 @@ def do_work(in_paths, out_path):
                 av_ser = av_ser[~av_ser.isnull()]
                 summary_df.loc[row_name] = av_ser
 
-            axl.append_df_to_excel(out_path, cl_df, sheet_name=row_name)
+            with pd.ExcelWriter(out_path, mode="a") as writer:
+                cl_df.to_excel(writer, sheet_name=row_name)
 
             counter += 1
             set_progress(counter*100/max_count)
@@ -491,10 +496,13 @@ def do_work(in_paths, out_path):
             count_df = get_count_df()
             if is_summary_needed:
                 if len(classes) > 0:
-                    avg_of_avg = summary_df.mean().round(decimals=2)
+                    avg_of_avg = summary_df.mean().astype(float).round(decimals=2)
                     count_df.loc['Weighted Average'] = avg_of_avg
                     summary_df.loc['Average'] = avg_of_avg
-                    axl.append_df_to_excel(out_path, summary_df, sheet_name='Summary')
+
+                    with pd.ExcelWriter(out_path, mode="a") as writer:
+                        summary_df.to_excel(writer, sheet_name='Summary')
+
                 else:
                     for col in avg_cols:
                         update_average(df, col)
@@ -505,12 +513,12 @@ def do_work(in_paths, out_path):
             counter += 1
             set_progress(counter*100/max_count)
 
-            axl.append_df_to_excel(out_path, count_df, sheet_name='Counts', startrow=0, startcol=0)
+            with pd.ExcelWriter(out_path, mode="a", if_sheet_exists='overlay') as writer:
+                count_df.to_excel(writer, sheet_name='Counts')
+
     except Exception as e:
         set_last_error(e)
         success = False
-
-    update_df(in_paths)
 
     set_progress(100)
     return success

@@ -8,3 +8,10 @@
 __pycache__/append_toexcel.cpython-39.pyc
 __pycache__/main.cpython-39.pyc
 *.vsidx
+/data/OutputTemplate.xlsx
+/.idea
+/.vs/SPC/v17
+/test.py
+/path_to_file.xlsx
+/data/OutputTemplate.xlsx
+/data/OutputTemplate.xlsx

@@ -346,6 +346,8 @@ def update_progress_fun():
         btn2['text'] = 'Generate'
         enable_all()
 
+        update_df(in_filenames)
+
 
 def stop_indeterminate_pb():
     pb.stop()
