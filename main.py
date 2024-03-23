@@ -456,6 +456,9 @@ def format_tabel_header_in_all_sheets(file_path, row_index):
     workbook = openpyxl.load_workbook(filename=file_path)
 
     for sheet_name in workbook.sheetnames:
+        if sheet_name == 'Graphical Representation':
+            continue
+
         sheet = workbook[sheet_name]
         for cell in sheet[row_index]:
             sheet.column_dimensions[get_column_letter(cell.column)].width = get_cell_width(cell)
