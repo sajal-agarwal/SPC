@@ -474,6 +474,7 @@ def do_work(in_paths, out_path):
 
             cl_df = df[choices]
             cl_df.reset_index(inplace=True, drop=True)
+            cl_df.index += 1
             for col in avg_cols:
                 update_average(cl_df, col)
 
