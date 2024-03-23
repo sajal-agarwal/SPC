@@ -90,17 +90,17 @@ def load_rem_inc_if_from_default_profile():
 
     str4 = get_remove_if_str()
     if len(str4) > 0:
-        scroll_txt2.configure(state='normal')
+        scroll_txt2.configure(state=NORMAL)
         scroll_txt2.insert(END, str4)
         scroll_txt3.delete('1.0', END)
-        scroll_txt3.configure(state='disabled')
+        scroll_txt3.configure(state=DISABLED)
     else:
         str5 = get_include_if_str()
         if len(str5) > 0:
-            scroll_txt3.configure(state='normal')
+            scroll_txt3.configure(state=NORMAL)
             scroll_txt3.insert(END, str5)
             scroll_txt2.delete('1.0', END)
-            scroll_txt2.configure(state='disabled')
+            scroll_txt2.configure(state=DISABLED)
 
 
 def load_rules_from_profile():
@@ -188,26 +188,26 @@ def get_summary():
 
 
 def enable_all():
-    btn1.config(state='normal')
+    btn1.config(state=NORMAL)
     cur_tab = tabControl.index(tabControl.select())
-    btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6) else 'normal'))
-    btn4.config(state=('normal' if (cur_tab == 2) else 'disabled'))
-    btn5.config(state=('normal' if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0) else 'disabled'))
-    scroll_txt2.config(state='normal' if (len(scroll_txt3.get(0.1, END).strip()) == 0) and
-                                         (not generation_in_progress) else 'disabled')
-    scroll_txt3.config(state='normal' if (len(scroll_txt2.get(0.1, END).strip()) == 0) and
-                                         (not generation_in_progress) else 'disabled')
-    scroll_txt4.config(state='normal')
+    btn3.config(state=(DISABLED if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6) else NORMAL))
+    btn4.config(state=(NORMAL if (cur_tab == 2) else DISABLED))
+    btn5.config(state=(NORMAL if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0) else DISABLED))
+    scroll_txt2.config(state=NORMAL if (len(scroll_txt3.get(0.1, END).strip()) == 0) and
+                                       (not generation_in_progress) else DISABLED)
+    scroll_txt3.config(state=NORMAL if (len(scroll_txt2.get(0.1, END).strip()) == 0) and
+                                       (not generation_in_progress) else DISABLED)
+    scroll_txt4.config(state=NORMAL)
 
 
 def disable_all():
-    btn1.config(state='disabled')
-    btn3.config(state='disabled')
-    btn4.config(state='disabled')
-    btn5.config(state='disabled')
-    scroll_txt2.config(state='disabled')
-    scroll_txt3.config(state='disabled')
-    scroll_txt4.config(state='disabled')
+    btn1.config(state=DISABLED)
+    btn3.config(state=DISABLED)
+    btn4.config(state=DISABLED)
+    btn5.config(state=DISABLED)
+    scroll_txt2.config(state=DISABLED)
+    scroll_txt3.config(state=DISABLED)
+    scroll_txt4.config(state=DISABLED)
 
 
 def trigger_generation():
@@ -232,7 +232,7 @@ def trigger_generation():
 def generate_out_excel():
     global generation_in_progress
     if generation_in_progress:
-        btn2.configure(state='disabled')
+        btn2.configure(state=DISABLED)
         status.config(fg='black')
         status_text.set('Aborting...')
         pb.place(x=75, y=52, width=0, height=0)
@@ -330,7 +330,7 @@ def update_progress_fun():
         if err2 == '':
             status.config(fg='green')
             if generation_aborted:
-                btn2.configure(state='normal')
+                btn2.configure(state=NORMAL)
                 status_text.set('Aborted successfully!')
                 os.remove(out_file_name)
                 generation_aborted = False
@@ -382,7 +382,7 @@ def update_columns():
             status.config(fg='red')
             status_text.set(err1)
 
-        btn2.configure(state='normal')
+        btn2.configure(state=NORMAL)
         enable_all()
     else:
         window.after(progress_bar_update_interval, update_columns)
@@ -402,7 +402,7 @@ def trigger_update_columns():
     listbox2.delete(0, END)
     listbox3.delete(0, END)
 
-    btn2.configure(state='disabled')
+    btn2.configure(state=DISABLED)
     disable_all()
 
     start_indeterminate_pb()
@@ -522,7 +522,7 @@ def remove_btn_clicked():
     for index in if_indices:
         in_filenames.pop(index)
         listbox_infile.delete(index)
-    btn5.config(state='disabled')
+    btn5.config(state=DISABLED)
     trigger_update_columns()
 
 
@@ -583,7 +583,7 @@ def on_avg_listbox_selection_changed():
 
 def on_infile_listbox_selection_changed():
     cs = listbox_infile.curselection()
-    btn5.config(state='normal' if len(cs) > 0 else 'disabled')
+    btn5.config(state=NORMAL if len(cs) > 0 else DISABLED)
 
 
 def on_listbox_selection_changed(evt):
@@ -671,10 +671,10 @@ def on_listbox_selection_changed3(evt):
 def update_help():
     if rsf_index & 1:
         tab_name = tabControl.tab(tabControl.select(), 'text')
-        scroll_txt5.config(state='normal')
+        scroll_txt5.config(state=NORMAL)
         scroll_txt5.delete('1.0', END)
         scroll_txt5.insert(END, app_help[tab_name])
-        scroll_txt5.config(state='disabled')
+        scroll_txt5.config(state=DISABLED)
 
 
 def clear_preview():
@@ -700,7 +700,7 @@ def update_preview():
 
         index = 0
         while index < len(get_df()):
-            preview.insert(parent='', index='end', iid=index, text='', values=get_df().iloc[index].to_list())
+            preview.insert(parent='', index='end', iid=str(index), text='', values=get_df().iloc[index].to_list())
             index += 1
 
         apply_rules()
@@ -721,24 +721,24 @@ def tab_changed(evt):
     if cur_tab == 3:
         if len(scroll_txt3.get(0.1, END).strip()) == 0:
             if not generation_in_progress:
-                scroll_txt2.configure(state='normal')
+                scroll_txt2.configure(state=NORMAL)
                 if len(rem_inc_if_err) > 0:
                     status.config(fg='red')
                     status_text.set(rem_inc_if_err)
         else:
-            scroll_txt2.configure(state='disabled')
+            scroll_txt2.configure(state=DISABLED)
             status.config(fg='orange')
             status_text.set('Remove all the conditions from "Include If" tab to add condition(s) here!')
             clear_msg_on_tab_change = True
     elif cur_tab == 4:
         if len(scroll_txt2.get(0.1, END).strip()) == 0:
             if not generation_in_progress:
-                scroll_txt3.config(state='normal')
+                scroll_txt3.config(state=NORMAL)
                 if len(rem_inc_if_err) > 0:
                     status.config(fg='red')
                     status_text.set(rem_inc_if_err)
         else:
-            scroll_txt3.configure(state='disabled')
+            scroll_txt3.configure(state=DISABLED)
             status.config(fg='orange')
             status_text.set('Remove all the conditions from "Remove If" tab to add condition(s) here!')
             clear_msg_on_tab_change = True
@@ -747,12 +747,12 @@ def tab_changed(evt):
             status.config(fg='red')
             status_text.set(rule_err)
 
-    btn3.config(state=('disabled' if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6
-                                      or generation_in_progress) else 'normal'))
-    btn4.config(state=('normal' if ((cur_tab == 2) and not generation_in_progress) else 'disabled'))
+    btn3.config(state=(DISABLED if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6
+                                    or generation_in_progress) else NORMAL))
+    btn4.config(state=(NORMAL if ((cur_tab == 2) and not generation_in_progress) else DISABLED))
 
-    btn5.config(state=('normal' if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0)
-                                   and (not generation_in_progress) else 'disabled'))
+    btn5.config(state=(NORMAL if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0)
+                and (not generation_in_progress) else DISABLED))
 
     update_help()
 
@@ -798,7 +798,7 @@ def validate_rem_inc_if_str(rem_str):
     global rem_inc_if_err
     rem_inc_if_err = err_msg
 
-    return ((not empty) and success)
+    return (not empty) and success
 
 
 def update_remove_if_cond():
@@ -1202,7 +1202,7 @@ scroll_txt4.bind("<<Modified>>", rules_text_changed)
 
 lbl1 = Label(window, text="Help", anchor='w')
 scroll_txt5 = ScrolledText(window, bg='#f0f0f0', border=0, wrap=WORD)
-scroll_txt5.config(state='disabled')
+scroll_txt5.config(state=DISABLED)
 
 preview_frame = Frame(window)
 preview_vsb = Scrollbar(preview_frame)

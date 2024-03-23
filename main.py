@@ -44,7 +44,7 @@ def set_last_error(cur_err):
         last_err_str = cur_err
 
 
-def get_last_error() -> object:
+def get_last_error() -> str:
     with error_lock:
         return last_err_str
 
