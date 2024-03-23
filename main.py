@@ -1,8 +1,18 @@
+import openpyxl
 import pandas
 import pandas as pd
 import threading
 import math
 import shutil
+import xlwings as xlwings
+from openpyxl.styles import Alignment, PatternFill
+from openpyxl.utils import get_column_letter
+
+
+# Constants
+COLUMN_WIDTH = 16
+INDEX_COLUMN_WIDTH = 8
+NAME_COLUMN_WIDTH = 24
 
 pd.options.mode.chained_assignment = None
 # pd.set_option('display.max_columns', None)
@@ -329,7 +339,17 @@ def delete_columns():
 
 
 def create_output_file_from_template(out_file):
-    shutil.copyfile('./data/OutputTemplate.xlsx', out_file)
+    wb = openpyxl.Workbook()
+    try:
+        shutil.copyfile('./data/OutputTemplate.xlsx', out_file)
+    except PermissionError as _:
+        try:
+            book = xlwings.Book(out_file)
+            book.close()
+
+            shutil.copyfile('./data/OutputTemplate.xlsx', out_file)
+        except Exception as _:
+            raise
 
 
 def get_count_df():
@@ -337,6 +357,7 @@ def get_count_df():
     global avg_cols
     if get_df_updated():
         count_df = pd.DataFrame(columns=avg_cols, index=range(10, 0, -1))
+        count_df.index.name = 'Points'
         for col in avg_cols:
             vc = df[col].value_counts()
             count_df[col] = [(vc[i] if i in vc else 0) for i in range(10, 0, -1)]
@@ -420,6 +441,28 @@ def do_include_if():
     except Exception as e:
         raise Exception("Invalid condition - " + ("only == supported with no extra spaces"
                                                   if (len(str(e)) == 0) else str(e)))
+
+
+def get_cell_width(cell):
+    if cell.value is None or len(cell.value) == 0:
+        return INDEX_COLUMN_WIDTH
+    elif cell.value.startswith('Name of the child'):
+        return NAME_COLUMN_WIDTH
+    else:
+        return COLUMN_WIDTH
+
+
+def format_tabel_header_in_all_sheets(file_path, row_index):
+    workbook = openpyxl.load_workbook(filename=file_path)
+
+    for sheet_name in workbook.sheetnames:
+        sheet = workbook[sheet_name]
+        for cell in sheet[row_index]:
+            sheet.column_dimensions[get_column_letter(cell.column)].width = get_cell_width(cell)
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+            cell.fill = PatternFill(patternType='solid', fgColor='C6E0B4')
+
+    workbook.save(file_path)
 
 
 def do_work(in_paths, out_path):
@@ -517,6 +560,7 @@ def do_work(in_paths, out_path):
             with pd.ExcelWriter(out_path, mode="a", if_sheet_exists='overlay') as writer:
                 count_df.to_excel(writer, sheet_name='Counts')
 
+            format_tabel_header_in_all_sheets(out_path, 1)
     except Exception as e:
         set_last_error(e)
         success = False
