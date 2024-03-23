@@ -5,7 +5,7 @@ import threading
 import math
 import shutil
 import xlwings as xlwings
-from openpyxl.styles import Alignment, PatternFill
+from openpyxl.styles import Alignment, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
 
 
@@ -13,6 +13,7 @@ from openpyxl.utils import get_column_letter
 COLUMN_WIDTH = 16
 INDEX_COLUMN_WIDTH = 8
 NAME_COLUMN_WIDTH = 24
+HEADER_ROW_INDEX = 1
 
 pd.options.mode.chained_assignment = None
 # pd.set_option('display.max_columns', None)
@@ -452,20 +453,38 @@ def get_cell_width(cell):
         return COLUMN_WIDTH
 
 
-def format_tabel_header_in_all_sheets(file_path, row_index):
-    workbook = openpyxl.load_workbook(filename=file_path)
-
+def format_tabel_header_in_all_sheets(workbook):
     for sheet_name in workbook.sheetnames:
         if sheet_name == 'Graphical Representation':
             continue
 
         sheet = workbook[sheet_name]
-        for cell in sheet[row_index]:
+        for cell in sheet[HEADER_ROW_INDEX]:
             sheet.column_dimensions[get_column_letter(cell.column)].width = get_cell_width(cell)
             cell.alignment = Alignment(vertical='center', wrap_text=True)
             cell.fill = PatternFill(patternType='solid', fgColor='C6E0B4')
 
-    workbook.save(file_path)
+
+def format_average_row_in_all_sheets(workbook):
+    for sheet_name in workbook.sheetnames:
+        if sheet_name == 'Graphical Representation' or sheet_name == 'MasterSheet':
+            continue
+
+        sheet = workbook[sheet_name]
+        row_index = 2
+        average_row_found = False
+        while sheet[row_index][0] is not None or len(sheet[row_index][0]) > 0:
+            if sheet[row_index][0].value == 'Average' or sheet[row_index][0].value == 'Weighted Average':
+                average_row_found = True
+                break
+            row_index += 1
+
+        if average_row_found:
+            for cell in sheet[row_index]:
+                cell.border = Border(left=Side(style='thin'),
+                                     right=Side(style='thin'),
+                                     top=Side(style='thin'),
+                                     bottom=Side(style='thin'))
 
 
 def do_work(in_paths, out_path):
@@ -563,7 +582,10 @@ def do_work(in_paths, out_path):
             with pd.ExcelWriter(out_path, mode="a", if_sheet_exists='overlay') as writer:
                 count_df.to_excel(writer, sheet_name='Counts')
 
-            format_tabel_header_in_all_sheets(out_path, 1)
+            workbook = openpyxl.load_workbook(filename=out_path)
+            format_tabel_header_in_all_sheets(workbook)
+            format_average_row_in_all_sheets(workbook)
+            workbook.save(out_path)
     except Exception as e:
         set_last_error(e)
         success = False
