@@ -460,9 +460,12 @@ def format_tabel_header_in_all_sheets(workbook):
 
         sheet = workbook[sheet_name]
         for cell in sheet[HEADER_ROW_INDEX]:
-            sheet.column_dimensions[get_column_letter(cell.column)].width = get_cell_width(cell)
+            column_letter = get_column_letter(cell.column)
+            sheet.column_dimensions[column_letter].width = get_cell_width(cell)
             cell.alignment = Alignment(vertical='center', wrap_text=True)
             cell.fill = PatternFill(patternType='solid', fgColor='C6E0B4')
+
+        sheet.auto_filter.ref = sheet.dimensions
 
 
 def format_average_row_in_all_sheets(workbook):
