@@ -1122,6 +1122,49 @@ def top_window_resized(event):
 
 load_paths_from_default_profile()
 
+
+treeview_popup_row = ''
+treeview_popup_col = ''
+
+
+def add_remove_if_filter():
+    global treeview_popup_row
+    global treeview_popup_col
+    treeview_popup_item = preview.item(preview.get_children()[int(treeview_popup_row)])['values'][
+        int(treeview_popup_col.lstrip('#')) - 1]
+    treeview_popup_col_name = preview.column(int(treeview_popup_col.lstrip('#')) - 1)['id']
+    rem_if_filter_str = treeview_popup_col_name + '==' + str(treeview_popup_item)
+    cur_rem_str = scroll_txt2.get(0., END).strip()
+    cur_rem_str = cur_rem_str + ('' if len(cur_rem_str) == 0 else '\n') + rem_if_filter_str
+    scroll_txt2.delete('1.0', END)
+    scroll_txt2.insert(END, cur_rem_str)
+
+
+def add_include_if_filter():
+    global treeview_popup_row
+    global treeview_popup_col
+    treeview_popup_item = preview.item(preview.get_children()[int(treeview_popup_row)])['values'][
+        int(treeview_popup_col.lstrip('#')) - 1]
+    treeview_popup_col_name = preview.column(int(treeview_popup_col.lstrip('#')) - 1)['id']
+    rem_if_filter_str = treeview_popup_col_name + '==' + str(treeview_popup_item)
+    cur_rem_str = scroll_txt3.get(0., END).strip()
+    cur_rem_str = cur_rem_str + ('' if len(cur_rem_str) == 0 else '\n') + rem_if_filter_str
+    scroll_txt3.delete('1.0', END)
+    scroll_txt3.insert(END, cur_rem_str)
+
+
+def treeview_popup(event):
+    global treeview_popup_row
+    global treeview_popup_col
+    treeview_popup_row = preview.identify_row(event.y)
+    treeview_popup_col = preview.identify_column(event.x)
+    if treeview_popup_row and treeview_popup_col:
+        context_menu = Menu(window, tearoff=0)
+        context_menu.add_command(label="Add Remove Filter", command=add_remove_if_filter)
+        context_menu.add_command(label="Add Include Filter", command=add_include_if_filter)
+        context_menu.post(event.x_root, event.y_root)
+
+
 window = TkinterDnD.Tk()
 window.drop_target_register(DND_FILES)
 
@@ -1210,6 +1253,7 @@ preview_vsb.pack(side=RIGHT, fill=Y)
 preview_hsb = Scrollbar(preview_frame, orient='horizontal')
 preview_hsb.pack(side=BOTTOM, fill=X)
 preview = ttk.Treeview(preview_frame, yscrollcommand=preview_vsb.set, xscrollcommand=preview_hsb.set)
+preview.bind("<Button-3>", treeview_popup)
 preview.pack(fill=BOTH, expand=True)
 preview_vsb.config(command=preview.yview)
 preview_hsb.config(command=preview.xview)
