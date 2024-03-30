@@ -31,6 +31,15 @@ remove_if_str: str = ''
 include_if_str: str = ''
 rules = {}
 sheet_columns = []
+highlight_columns = [
+    'Approach of teachers during the PTM.',
+    'Satisfaction levels on responses/replies received from teachers.',
+    'a) Academic subjects transaction',
+    'b) Activity classes transaction',
+    'c) Class Teacher’s approach',
+    'd) Subject Teacher’s Approach'
+    'e) Written work/ Assignments'
+]
 
 progress_lock = threading.Lock()
 error_lock = threading.Lock()
@@ -340,17 +349,13 @@ def delete_columns():
 
 
 def create_output_file_from_template(out_file):
-    wb = openpyxl.Workbook()
     try:
         shutil.copyfile('./data/OutputTemplate.xlsx', out_file)
     except PermissionError as _:
-        try:
-            book = xlwings.Book(out_file)
-            book.close()
+        book = xlwings.Book(out_file)
+        book.close()
 
-            shutil.copyfile('./data/OutputTemplate.xlsx', out_file)
-        except Exception as _:
-            raise
+        shutil.copyfile('./data/OutputTemplate.xlsx', out_file)
 
 
 def get_count_df():
@@ -490,6 +495,34 @@ def format_average_row_in_all_sheets(workbook):
                                      bottom=Side(style='thin'))
 
 
+def set_row_color(worksheet, row_number, color):
+    for cell1 in worksheet[row_number]:
+        cell1.fill = PatternFill(patternType='solid', fgColor=color)
+
+
+def highlight_rows(workbook):
+    for sheet_name in workbook.sheetnames:
+        ws = workbook[sheet_name]
+        row_index = 2
+        for row in ws.iter_rows(min_row=2):
+            set_background_color = False
+            col_index = 0
+            for cell in row:
+                if ws[1][col_index].value in highlight_columns:
+                    print(ws[1][col_index].value)
+                    if isinstance(cell.value, (int, float)) and cell.value <= 7:
+                        set_background_color = True
+                    elif isinstance(cell.value, (str,)) and is_str_numeric(cell.value) and int(cell.value) <= 7:
+                        set_background_color = True
+
+                col_index += 1
+
+            if set_background_color:
+                set_row_color(ws, row_index, "FFFF00")
+
+            row_index += 1
+
+
 def do_work(in_paths, out_path):
     global df
     global summary_df
@@ -588,6 +621,7 @@ def do_work(in_paths, out_path):
             workbook = openpyxl.load_workbook(filename=out_path)
             format_tabel_header_in_all_sheets(workbook)
             format_average_row_in_all_sheets(workbook)
+            highlight_rows(workbook)
             workbook.save(out_path)
     except Exception as e:
         set_last_error(e)
