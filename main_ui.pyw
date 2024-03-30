@@ -81,6 +81,8 @@ def load_selection_info_from_default_profile():
     set_sheet_cols_str(cur_profile.get('sheet_sel_cache', []))
     update_sheet_sel_view()
 
+    update_highlight_column_sel_view_from_cur_profile()
+
 
 def load_rem_inc_if_from_default_profile():
     global cur_profile
@@ -269,6 +271,7 @@ def generate_out_excel():
     set_deleted_cols(listbox.curselection())
     set_average_cols(listbox2.curselection())
     set_sheet_columns(listbox3.curselection())
+    set_sheet_highlight_columns(highlight_column_listbox.curselection())
     update_remove_if_cond()
     update_include_if_cond()
 
@@ -305,6 +308,8 @@ def save_profile_to_file(file_name):
             cur_profile['remove_if_str'] = get_remove_if_str()
             cur_profile['include_if_str'] = get_include_if_str()
             cur_profile['rules'] = scroll_txt4.get(0.1, END).strip()
+            cur_profile['highlight_columns'] = get_sheet_highlight_columns()
+
             json.dump(cur_profile, file, indent=4)
     except Exception as e:
         messagebox.showerror('Save Profile', str(e))
@@ -369,6 +374,7 @@ def update_columns():
                 listbox.insert(index, col)
                 listbox2.insert(index, col)
                 listbox3.insert(index, col)
+                highlight_column_listbox.insert(index, col)
                 index += 1
 
             stop_indeterminate_pb()
@@ -401,6 +407,7 @@ def trigger_update_columns():
     listbox.delete(0, END)
     listbox2.delete(0, END)
     listbox3.delete(0, END)
+    highlight_column_listbox.delete(0, END)
 
     btn2.configure(state=DISABLED)
     disable_all()
@@ -467,6 +474,7 @@ def clear_in_files():
         listbox.delete(0, END)
         listbox2.delete(0, END)
         listbox3.delete(0, END)
+        highlight_column_listbox.delete(0, END)
         clear_preview()
         clear()
         update_rules()
@@ -496,6 +504,14 @@ def update_rem_sel_view():
         if col in cols:
             listbox.selection_set(cols.index(col))
     on_rem_listbox_selection_changed()
+
+
+def update_highlight_column_sel_view_from_cur_profile():
+    highlight_cols = cur_profile.get('highlight_columns', [])
+    cols = get_columns()
+    for col in highlight_cols:
+        if col in cols:
+            highlight_column_listbox.selection_set(cols.index(col))
 
 
 def update_sheet_sel_view():
@@ -1205,6 +1221,7 @@ tab4 = ttk.Frame(tabControl)
 tab5 = ttk.Frame(tabControl)
 tab6 = ttk.Frame(tabControl)
 tab7 = ttk.Frame(tabControl)
+tab8 = ttk.Frame(tabControl)
 tabControl.add(tab1, text='Input Excel')
 tabControl.add(tab2, text='Remove Columns')
 tabControl.add(tab3, text='Average Columns')
@@ -1212,6 +1229,7 @@ tabControl.add(tab4, text='Remove If')
 tabControl.add(tab5, text='Include If')
 tabControl.add(tab6, text='Rules')
 tabControl.add(tab7, text='Sheets Columns')
+tabControl.add(tab8, text='Highlight Columns')
 
 scrollbar_infile = Scrollbar(tab1)
 scrollbar_infile.pack(side=RIGHT, fill=Y)
@@ -1264,6 +1282,12 @@ listbox3 = Listbox(tab7, selectmode=MULTIPLE, exportselection=0, yscrollcommand=
 listbox3.pack(side=LEFT, expand=1, fill="both")
 listbox3.bind('<<ListboxSelect>>', on_listbox_selection_changed3)
 scrollbar3.config(command=listbox3.yview)
+
+highlight_col_scrollbar = Scrollbar(tab8)
+highlight_col_scrollbar.pack(side=RIGHT, fill=Y)
+highlight_column_listbox = Listbox(tab8, selectmode=MULTIPLE, exportselection=0, yscrollcommand=highlight_col_scrollbar.set)
+highlight_column_listbox.pack(side=LEFT, expand=1, fill="both")
+highlight_col_scrollbar.config(command=highlight_column_listbox.yview)
 
 lbl2 = Label(window, text="Output Excel", anchor='w')
 out_file_text = StringVar()

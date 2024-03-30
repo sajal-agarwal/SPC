@@ -31,15 +31,7 @@ remove_if_str: str = ''
 include_if_str: str = ''
 rules = {}
 sheet_columns = []
-highlight_columns = [
-    'Approach of teachers during the PTM.',
-    'Satisfaction levels on responses/replies received from teachers.',
-    'a) Academic subjects transaction',
-    'b) Activity classes transaction',
-    'c) Class Teacher’s approach',
-    'd) Subject Teacher’s Approach'
-    'e) Written work/ Assignments'
-]
+highlight_columns = []
 
 progress_lock = threading.Lock()
 error_lock = threading.Lock()
@@ -179,6 +171,17 @@ def set_sheet_columns(cols):
 def get_sheet_columns():
     global sheet_columns
     return sheet_columns
+
+
+def set_sheet_highlight_columns(cols):
+    global columns
+    global highlight_columns
+    highlight_columns = [columns[col] for col in cols]
+
+
+def get_sheet_highlight_columns():
+    global highlight_columns
+    return highlight_columns
 
 
 def clear():
@@ -502,6 +505,9 @@ def set_row_color(worksheet, row_number, color):
 
 def highlight_rows(workbook):
     for sheet_name in workbook.sheetnames:
+        if sheet_name == 'Graphical Representation' or sheet_name == 'Counts':
+            continue
+
         ws = workbook[sheet_name]
         row_index = 2
         for row in ws.iter_rows(min_row=2):
@@ -509,7 +515,6 @@ def highlight_rows(workbook):
             col_index = 0
             for cell in row:
                 if ws[1][col_index].value in highlight_columns:
-                    print(ws[1][col_index].value)
                     if isinstance(cell.value, (int, float)) and cell.value <= 7:
                         set_background_color = True
                     elif isinstance(cell.value, (str,)) and is_str_numeric(cell.value) and int(cell.value) <= 7:
