@@ -193,7 +193,7 @@ def enable_all():
     btn1.config(state=NORMAL)
     cur_tab = tabControl.index(tabControl.select())
     btn3.config(state=(DISABLED if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6) else NORMAL))
-    btn4.config(state=(NORMAL if (cur_tab == 2) else DISABLED))
+    btn4.config(state=(NORMAL if (cur_tab == 2 or cur_tab == 7) else DISABLED))
     btn5.config(state=(NORMAL if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0) else DISABLED))
     scroll_txt2.config(state=NORMAL if (len(scroll_txt3.get(0.1, END).strip()) == 0) and
                                        (not generation_in_progress) else DISABLED)
@@ -523,13 +523,22 @@ def update_sheet_sel_view():
 
 
 def select_all_numeric_cols_in_list():
-    listbox2.selection_clear(0, 'end')
-    select_all_numeric_cols()
-    average_cols = get_avg_columns()
-    cols = get_columns()
-    for col in average_cols:
-        listbox2.selection_set(cols.index(col))
-    on_avg_listbox_selection_changed()
+    cur_tab = tabControl.index(tabControl.select())
+    if cur_tab == 2:
+        listbox2.selection_clear(0, 'end')
+        select_all_numeric_cols(cur_tab)
+        average_cols = get_avg_columns()
+        cols = get_columns()
+        for col in average_cols:
+            listbox2.selection_set(cols.index(col))
+        on_avg_listbox_selection_changed()
+    elif cur_tab == 7:
+        highlight_column_listbox.selection_clear(0, 'end')
+        select_all_numeric_cols(cur_tab)
+        highlight_cols = get_sheet_highlight_columns()
+        cols = get_columns()
+        for col in highlight_cols:
+            highlight_column_listbox.selection_set(cols.index(col))
 
 
 def remove_btn_clicked():
@@ -765,7 +774,7 @@ def tab_changed(evt):
 
     btn3.config(state=(DISABLED if (cur_tab == 1 or cur_tab == 2 or cur_tab == 6
                                     or generation_in_progress) else NORMAL))
-    btn4.config(state=(NORMAL if ((cur_tab == 2) and not generation_in_progress) else DISABLED))
+    btn4.config(state=(NORMAL if ((cur_tab == 2 or cur_tab == 7) and not generation_in_progress) else DISABLED))
 
     btn5.config(state=(NORMAL if (cur_tab == 0) and (len(listbox_infile.curselection()) > 0)
                 and (not generation_in_progress) else DISABLED))

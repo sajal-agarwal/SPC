@@ -265,14 +265,21 @@ def is_column_numeric(col):
     return is_numeric and (count_nan < df[col].size), faulty_row
 
 
-def select_all_numeric_cols():
+def select_all_numeric_cols(cur_tab):
     apply_rules()
     if get_df_updated():
         global avg_cols
-        avg_cols.clear()
+        global highlight_columns
+        if cur_tab == 2:
+            avg_cols.clear()
+        elif cur_tab == 7:
+            highlight_columns.clear()
         for col in columns:
             if is_column_numeric(col)[0]:
-                avg_cols.append(col)
+                if cur_tab == 2:
+                    avg_cols.append(col)
+                elif cur_tab == 7:
+                    highlight_columns.append(col)
 
 
 tmp_col_rules = {}
