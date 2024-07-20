@@ -51,6 +51,8 @@ except Exception as err:
 try:
     with open(default_profile_file, 'r') as f:
         cur_profile = json.load(f)
+except FileNotFoundError as _:
+    pass
 except Exception as err:
     logging.error(err)
 
