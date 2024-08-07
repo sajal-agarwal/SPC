@@ -1,0 +1,48 @@
+Sub ExportMultipleChartsToPPT()
+    ' Create a new PowerPoint application
+    Dim PowerPointApp As Object
+    Set PowerPointApp = CreateObject("PowerPoint.Application")
+
+    ' Create a new presentation
+    Dim myPresentation As Object
+    Set myPresentation = PowerPointApp.Presentations.Add
+
+    ' Define the names of the charts
+    Dim chartNames As Variant
+    chartNames = Array("Chart 1", "Chart 2", "Chart 3", "Chart 4", "Chart 5", "Chart 6", "Chart 7", "Chart 8", "Chart 9", "Chart 10", "Chart 13", "Chart 14", "Chart 15", "Chart 16", "Chart 17", "Chart 18", "Chart 11", "Chart 12") ' Add more chart names as needed
+
+    ' Loop through each chart name
+    Dim i As Integer
+    For i = LBound(chartNames) To UBound(chartNames)
+        ' Copy the chart from Excel
+        Sheets("Graphical Representation").ChartObjects(chartNames(i)).Chart.CopyPicture
+
+        ' Add a new blank slide (ID: 12) and paste the chart into PowerPoint
+        Dim myShape As Object
+        Set myShape = myPresentation.Slides.Add(i + 1, 12).Shapes.Paste
+
+        ' Increase the height and width of the chart by 2 times
+        myShape.LockAspectRatio = msoFalse
+        myShape.Height = myShape.Height * 2
+        myShape.Width = myShape.Width * 2
+
+        myShape.LockAspectRatio = msoTrue
+         
+        ' Ensure the chart's height and width do not exceed the slide's height and width
+        If myShape.Height > myPresentation.PageSetup.SlideHeight Then
+            myShape.Height = myPresentation.PageSetup.SlideHeight
+        End If
+        If myShape.Width > myPresentation.PageSetup.SlideWidth Then
+            myShape.Width = myPresentation.PageSetup.SlideWidth
+        End If
+        
+        ' Move the chart to the center of the slide
+        myShape.Left = (myPresentation.PageSetup.SlideWidth - myShape.Width) / 2
+        myShape.Top = (myPresentation.PageSetup.SlideHeight - myShape.Height) / 2
+    Next i
+
+    ' Make PowerPoint visible
+    PowerPointApp.Visible = True
+End Sub
+
+
