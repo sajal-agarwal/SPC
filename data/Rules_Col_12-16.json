@@ -1,0 +1,36 @@
+{
+    "in_file_last_dir": "C:/Users/sjlkg/Desktop",
+    "out_file_name": "C:\\Users\\sjlkg\\Desktop\\out.xlsx",
+    "avg_sel_cache": [
+        "Approach of teachers during the PTM",
+        "Satisfaction levels on responses/replies received from teachers",
+        "a) Academic Subject's transaction",
+        "b) Class Teacher's approach",
+        "c) Subject Teacher's approach",
+        "d) Written work / Assignments",
+        "\u00a0e) Activity Classes transaction",
+        "Overall happiness of the child in School\n",
+        "Child Safety (Infrastructure/Facility)",
+        "Responsiveness & approach of Transport Team\n",
+        "Responsiveness & approach of the Accounts Team\n",
+        "Responsiveness & approach of the Admin Team\n",
+        "Lunch Facility",
+        "Campus hygiene",
+        "Satisfaction for Shri Connect Parent\u00a0Portal App"
+    ],
+    "rem_sel_cache": [
+        "ID",
+        "Start time",
+        "Completion time",
+        "Email",
+        "Name"
+    ],
+    "remove_if_str": "",
+    "include_if_str": "",
+    "rules": "Outstanding=10:12,13,14,15,16\nExcellent=9:12,13,14,15,16\nGood=8:12,13,14,15,16\nAverage=7:12,13,14,15,16\nPoor=6:12,13,14,15,16\nVery Poor=5:12,13,14,15,16\nnan=nan",
+    "sheet_sel_cache": [
+        "Class",
+        "Section"
+    ],
+    "highlight_columns": []
+}
