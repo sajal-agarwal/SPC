@@ -491,7 +491,7 @@ def format_average_row_in_all_sheets(workbook):
         sheet = workbook[sheet_name]
         row_index = 2
         average_row_found = False
-        while sheet[row_index][0] is not None or len(sheet[row_index][0]) > 0:
+        while sheet[row_index][0] is not None and sheet[row_index][0].value is not None:
             if sheet[row_index][0].value == 'Average' or sheet[row_index][0].value == 'Weighted Average':
                 average_row_found = True
                 break
@@ -575,6 +575,8 @@ def do_work(in_paths, out_path):
             summary_df = pd.DataFrame(columns=avg_cols, index=[str1.replace("-", "") for str1 in classes])
 
         max_count = (len(classes) + 2)
+        # New dataframe to hold class name and feedback count
+        df_class_feedback_count = pd.DataFrame(columns=['Sheet Name', 'Feedback Count'])
         counter = 0
         for c in classes:
             if get_exit_flag():
@@ -602,6 +604,7 @@ def do_work(in_paths, out_path):
 
             with pd.ExcelWriter(out_path, mode="a") as writer:
                 cl_df.to_excel(writer, sheet_name=row_name)
+                df_class_feedback_count.loc[len(df_class_feedback_count)] = [row_name, len(cl_df) - 1]
 
             counter += 1
             set_progress(counter*100/max_count)
@@ -626,6 +629,9 @@ def do_work(in_paths, out_path):
 
             counter += 1
             set_progress(counter*100/max_count)
+
+            with pd.ExcelWriter(out_path, mode="a") as writer:
+                df_class_feedback_count.to_excel(writer, sheet_name='Feedback Count', index=False)
 
             with pd.ExcelWriter(out_path, mode="a", if_sheet_exists='overlay') as writer:
                 count_df.to_excel(writer, sheet_name='Counts')
