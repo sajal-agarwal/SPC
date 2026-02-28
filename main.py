@@ -583,7 +583,7 @@ def do_work(in_paths, out_path):
                 break
 
             cl_sec = c.split('-')
-            choices = [True]*len(df)
+            choices = pd.Series([True]*len(df), index=df.index)
             for col, val in zip(sheet_columns, cl_sec):
                 choices &= (df[col] == val)
 

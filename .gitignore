@@ -5,8 +5,7 @@
 .vs/SPC/FileContentIndex/read.lock
 .vs/SPC/v17/.suo
 .vs/VSWorkspaceState.json
-__pycache__/append_toexcel.cpython-39.pyc
-__pycache__/main.cpython-39.pyc
+__pycache__
 *.vsidx
 /data/OutputTemplate.xlsx
 /.idea
