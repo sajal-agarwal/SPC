@@ -15,6 +15,7 @@ INDEX_COLUMN_WIDTH = 8
 NAME_COLUMN_WIDTH = 24
 FEEDBACK_COLUMN_WIDTH = 40
 FEEDBACK_COLUMNS = {'Appreciation/Remarks', 'Feedback/Suggestions'}
+OVERALL_HAPPINESS_COLUMN = 'Overall happiness of the child in School'
 HEADER_ROW_INDEX = 1
 
 pd.options.mode.chained_assignment = None
@@ -234,6 +235,16 @@ def is_str_numeric(s):
 
 def update_average(cl_df, col_name):
     cl_df.at['Average', col_name] = round(cl_df[col_name].mean(), 2)
+
+
+def sort_by_overall_happiness(data_frame):
+    for column in data_frame.columns:
+        if isinstance(column, str) and column.strip() == OVERALL_HAPPINESS_COLUMN:
+            return data_frame.sort_values(by=column,
+                                          key=lambda values: pandas.to_numeric(values, errors='coerce'),
+                                          na_position='last',
+                                          kind='stable').reset_index(drop=True)
+    return data_frame
 
 
 def is_val_exits_in_column(col, val):
@@ -563,6 +574,8 @@ def do_work(in_paths, out_path):
         do_remove_if()
 
         do_include_if()
+
+        df = sort_by_overall_happiness(df)
 
         create_output_file_from_template(out_path)
 
