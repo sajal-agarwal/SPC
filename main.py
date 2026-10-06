@@ -13,6 +13,8 @@ from openpyxl.utils import get_column_letter
 COLUMN_WIDTH = 16
 INDEX_COLUMN_WIDTH = 8
 NAME_COLUMN_WIDTH = 24
+FEEDBACK_COLUMN_WIDTH = 40
+FEEDBACK_COLUMNS = {'Appreciation/Remarks', 'Feedback/Suggestions'}
 HEADER_ROW_INDEX = 1
 
 pd.options.mode.chained_assignment = None
@@ -464,6 +466,8 @@ def get_cell_width(cell):
         return INDEX_COLUMN_WIDTH
     elif cell.value.startswith('Name of the child'):
         return NAME_COLUMN_WIDTH
+    elif cell.value.strip() in FEEDBACK_COLUMNS:
+        return FEEDBACK_COLUMN_WIDTH
     else:
         return COLUMN_WIDTH
 
@@ -479,6 +483,13 @@ def format_tabel_header_in_all_sheets(workbook):
             sheet.column_dimensions[column_letter].width = get_cell_width(cell)
             cell.alignment = Alignment(vertical='center', wrap_text=True)
             cell.fill = PatternFill(patternType='solid', fgColor='C6E0B4')
+            if cell.value is not None and cell.value.strip() in FEEDBACK_COLUMNS:
+                for data_cell in sheet.iter_cols(min_col=cell.column,
+                                                 max_col=cell.column,
+                                                 min_row=HEADER_ROW_INDEX + 1,
+                                                 max_row=sheet.max_row):
+                    for wrapped_cell in data_cell:
+                        wrapped_cell.alignment = Alignment(vertical='top', wrap_text=True)
 
         sheet.auto_filter.ref = sheet.dimensions
 
